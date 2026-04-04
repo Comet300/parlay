@@ -31,10 +31,24 @@ If no matching provider is configured, the system SHALL return a 400
 error with a message indicating the provider is not configured.
 
 ### Requirement: API route implementation
-The /api/llm-proxy endpoint SHALL be implemented as a TanStack Start API
-route using `createAPIFileRoute` from `@tanstack/start/api` at
+The /api/llm-proxy endpoint SHALL be implemented as a TanStack Start
+server route using `createFileRoute` with `server.handlers` at
 `src/routes/api/llm-proxy.ts`. This provides full `Request`/`Response`
 control needed for SSE streaming. The route SHALL export a POST handler.
+
+```typescript
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/api/llm-proxy')({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        // Parse body, validate, proxy to LiteLLM, stream response
+      },
+    },
+  },
+});
+```
 
 ### Requirement: Rate limiting
 The /api/llm-proxy route SHALL enforce rate limiting to prevent abuse:

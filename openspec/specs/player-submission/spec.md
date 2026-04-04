@@ -69,8 +69,8 @@ Exceeding the limit SHALL return HTTP 429.
 
 ### Requirement: Submission API endpoint
 The system SHALL implement a POST endpoint at /api/submit as a TanStack
-Start API route using `createAPIFileRoute` from `@tanstack/start/api`
-at `src/routes/api/submit.ts`. The endpoint SHALL accept a JSON body:
+Start server route using `createFileRoute` with `server.handlers` at
+`src/routes/api/submit.ts`. The endpoint SHALL accept a JSON body:
 
 ```typescript
 {

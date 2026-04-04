@@ -212,7 +212,28 @@ fields. They are not content nodes and do not produce response data.
 All WYSIWYG markdown editors in the builder (Start, End, Card, Page
 headerContent, PageGroup headerContent) SHALL use the Milkdown Crepe
 editor (`@milkdown/crepe`) with the `@milkdown/react` integration
-(`useEditor` hook + `MilkdownProvider`).
+(`useEditor` hook + `MilkdownProvider`):
+
+```tsx
+import { Crepe } from '@milkdown/crepe';
+import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
+
+const CrepeEditor: React.FC<{ defaultValue: string }> = ({ defaultValue }) => {
+  const { get } = useEditor((root) => {
+    return new Crepe({ root, defaultValue, featureConfigs: { /* ... */ } });
+  });
+  return <Milkdown />;
+};
+
+// Wrap in MilkdownProvider
+<MilkdownProvider>
+  <CrepeEditor defaultValue={existingMarkdown} />
+</MilkdownProvider>
+```
+
+Content retrieval in React uses `get()?.getMarkdown()` from the `useEditor`
+return value. Change detection for auto-save uses Crepe's event listener:
+`crepe.on((listener) => listener.markdownUpdated((ctx, markdown) => { ... }))`.
 
 The Crepe editor SHALL support image and file uploads:
 - When a user pastes, drops, or inserts an image/file, the system SHALL
@@ -263,8 +284,9 @@ const crepe = new Crepe({
 });
 ```
 
-Content retrieval uses `crepe.getMarkdown()`. Preview mode uses
-`crepe.setReadonly(true)`.
+Preview mode uses `crepe.setReadonly(true)`. The `@milkdown/react`
+integration handles Crepe lifecycle (`create()` / `destroy()`)
+automatically via the `useEditor` hook.
 
 ### Requirement: Start and End node editors
 Start and End SHALL open the Milkdown Crepe editor in the right panel

@@ -8,8 +8,11 @@ and Resend for transactional emails.
 ## Requirements
 
 ### Requirement: Supported auth methods
-The system SHALL support email/password and Google OAuth for both signup
-and login via BetterAuth.
+The system SHALL support email/password for signup and login via BetterAuth.
+The system SHALL optionally support Google OAuth if GOOGLE_CLIENT_ID and
+GOOGLE_CLIENT_SECRET are set. If either is missing, the system SHALL omit
+the `socialProviders.google` block from the BetterAuth config and SHALL
+NOT render any Google OAuth buttons on /login or /signup.
 
 ### Requirement: BetterAuth server configuration
 The system SHALL configure BetterAuth in app/lib/auth/server.ts:
@@ -31,12 +34,17 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => { /* Resend */ },
   },
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    },
-  },
+  // Google OAuth — only included when credentials are set
+  ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ? {
+        socialProviders: {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        },
+      }
+    : {}),
   rateLimit: {
     storage: "database",  // required: Vercel functions are stateless
     customRules: {
@@ -63,12 +71,16 @@ requests under `/api/auth/*` to BetterAuth's internal handler, which manages:
 - Password reset link handling
 
 ```typescript
-import { createAPIFileRoute } from "@tanstack/start/api";
-import { auth } from "~/lib/auth/server";
+import { createFileRoute } from '@tanstack/react-router';
+import { auth } from '~/lib/auth/server';
 
-export const APIRoute = createAPIFileRoute("/api/auth/$")({
-  GET: ({ request }) => auth.handler(request),
-  POST: ({ request }) => auth.handler(request),
+export const Route = createFileRoute('/api/auth/$')({
+  server: {
+    handlers: {
+      GET: ({ request }) => auth.handler(request),
+      POST: ({ request }) => auth.handler(request),
+    },
+  },
 });
 ```
 
@@ -89,10 +101,18 @@ Configuration: RESEND_API_KEY environment variable.
 The sender address SHALL use a verified domain configured in Resend
 (e.g., `noreply@parlay.example.com`).
 
+### Requirement: Google OAuth feature flag
+The system SHALL expose a `googleOAuthEnabled` boolean flag to the client
+via a server function or route loader context, computed as
+`!!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET`.
+The /login and /signup pages SHALL use this flag to conditionally render
+Google OAuth buttons. Environment variables are server-side only — the
+client cannot check them directly.
+
 ### Requirement: Account creation (signup)
 The system SHALL provide a /signup page with:
 - Email + password registration form (with password confirmation)
-- Google OAuth "Sign up with Google" button
+- Google OAuth "Sign up with Google" button (only if `googleOAuthEnabled`)
 - Link to /login for existing users
 On successful signup the system SHALL create the BetterAuth user record,
 a corresponding user_profiles row, and redirect to /dashboard.
@@ -145,6 +165,30 @@ Child routes access the authenticated user via `Route.useRouteContext()`.
 The system SHALL validate user identity server-side using the BetterAuth
 session on all protected server functions and API routes.
 BetterAuth provides server-side session validation via `auth.api.getSession()`.
+
+### Requirement: Server route middleware for auth
+Protected server routes (e.g., /api/export) SHALL use TanStack Start's
+`server.middleware` array to validate BetterAuth sessions, reducing
+boilerplate in individual handlers:
+
+```typescript
+import { createFileRoute } from '@tanstack/react-router';
+
+export const Route = createFileRoute('/api/export/$facetId')({
+  server: {
+    middleware: [authMiddleware],
+    handlers: {
+      GET: async ({ request, context }) => {
+        // context.user is populated by authMiddleware
+      },
+    },
+  },
+});
+```
+
+The auth middleware SHALL validate the BetterAuth session, create a
+bridged Supabase client, and pass both `user` and `supabase` on the
+context. Unauthenticated requests SHALL receive a 401 response.
 
 ### Requirement: BetterAuth database connection
 BetterAuth connects directly to PostgreSQL via `pg` Pool using the
@@ -262,8 +306,8 @@ The system SHALL require the following environment variables:
 Auth & application:
 - APP_BASE_URL: Application base URL (for OAuth callbacks, email links)
 - BETTER_AUTH_SECRET: BetterAuth's internal signing secret
-- GOOGLE_CLIENT_ID: Google OAuth client ID
-- GOOGLE_CLIENT_SECRET: Google OAuth client secret
+- GOOGLE_CLIENT_ID: Google OAuth client ID (optional)
+- GOOGLE_CLIENT_SECRET: Google OAuth client secret (optional)
 - RESEND_API_KEY: Resend API key for transactional emails
 
 Supabase:

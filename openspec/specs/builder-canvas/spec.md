@@ -38,7 +38,9 @@ The system SHALL show a warning if the only path is Start -> End.
 ### Requirement: Node containment constraint
 The system SHALL require all content-tier nodes (card, likert, single_choice,
 multi_choice, email_collection) and Group nodes to be children of a Page
-or PageGroup node via React Flow parentId.
+or PageGroup node via React Flow parentId. All child nodes SHALL have
+`extent: 'parent'` set to prevent them from being dragged outside their
+container's boundaries.
 LLM nodes (scripted_llm, real_llm) are page-tier and exist at the
 canvas root level — they are NOT placed inside containers.
 The system SHALL reject any attempt to place a content-tier node on the

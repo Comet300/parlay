@@ -114,7 +114,10 @@ extended with Parlay-specific data fields defined in the builder-nodes spec:
 - node.type: the NodeTypeName (e.g., "page", "likert", "real_llm")
 - node.data: the node-type-specific data object (label, slug, condition, etc.)
 - node.parentId: the parent container node ID (for content-tier nodes)
-- node.position: { x, y } canvas coordinates
+- node.extent: 'parent' (for content-tier nodes — constrains dragging
+  within the container boundary)
+- node.position: { x, y } canvas coordinates (relative to parent for
+  child nodes, absolute for root nodes)
 
 The initial flow_definition for a new facet SHALL contain a Start node
 positioned at { x: 0, y: 200 } and an End node positioned at { x: 600, y: 200 }

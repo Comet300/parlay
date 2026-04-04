@@ -26,21 +26,42 @@ real_llm node side panel in the builder.
 
 ### Requirement: API key encryption
 On save, the system SHALL encrypt all API key values using Supabase Vault
-(`vault.create_secret()`) before writing to user_profiles.litellm_api_keys.
-The system SHALL write litellm_base_url and litellm_api_keys to the
-user_profiles row for the authenticated user.
+before writing to user_profiles.litellm_api_keys. The system SHALL write
+litellm_base_url and litellm_api_keys to the user_profiles row for the
+authenticated user.
+
+```sql
+-- Store an API key in Vault (returns a UUID as the secret ID)
+SELECT vault.create_secret(
+  'sk-abc123',              -- the plaintext API key
+  'openai-key-user-xyz',    -- a unique name for this secret
+  'OpenAI API key'          -- description
+);
+-- Returns: uuid (store this as api_key_secret_id)
+```
 
 The litellm_api_keys jsonb field SHALL store an array of provider configs:
 ```typescript
 [{ provider: string, api_key_secret_id: string }]
 ```
-where api_key_secret_id is the Vault secret ID returned by vault.create_secret().
+where api_key_secret_id is the UUID returned by `vault.create_secret()`.
+
+When a provider is removed, the system SHALL delete its Vault secret
+using `vault.delete_secret(api_key_secret_id)`.
 
 ### Requirement: API key retrieval at runtime
 When the LLM proxy needs to read a provider's API key, it SHALL query
-the `vault.decrypted_secrets` view using the api_key_secret_id to obtain
-the plaintext key. This view is only accessible via the service role key,
-which the LLM proxy already uses.
+the `vault.decrypted_secrets` view using the api_key_secret_id:
+
+```sql
+SELECT decrypted_secret FROM vault.decrypted_secrets
+WHERE id = '<api_key_secret_id>';
+```
+
+The `decrypted_secret` column contains the plaintext key. This view is
+only accessible via the service role key, which the LLM proxy already uses.
+The view decrypts on the fly — secrets remain encrypted on disk and in
+backups.
 
 ### Requirement: API key display on load
 When the settings page loads, the system SHALL display the saved

@@ -17,8 +17,8 @@ CSVs into a single ZIP archive.
 
 ### Requirement: Authentication and ownership
 The /api/export/:facetId and /api/export/zip/:formId routes SHALL be
-implemented as TanStack Start API routes using `createAPIFileRoute` from
-`@tanstack/start/api` at `src/routes/api/export/$facetId.ts` and
+implemented as TanStack Start server routes using `createFileRoute` with
+`server.handlers` at `src/routes/api/export/$facetId.ts` and
 `src/routes/api/export/zip/$formId.ts`. Both routes SHALL require a valid
 BetterAuth session and validate that the requesting user owns the form
 via RLS (using the user's JWT).
