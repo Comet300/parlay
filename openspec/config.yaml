@@ -1,0 +1,26 @@
+schema: spec-driven
+
+context: |
+  Tech stack: TanStack Start, TypeScript strict, Supabase, BetterAuth,
+  React Flow v12, Milkdown Crepe, Zustand, TailwindCSS, FingerprintJS v5.1,
+  Framer Motion, Resend
+  Deployment target: Vercel (free tier compatible)
+  Conversation sessions: Supabase llm_conversations table (NOT in-memory)
+  Rate limiting: Supabase rate_limit_log table
+  Domain: SaaS visual interview/survey flow builder
+  Auth: BetterAuth (public schema); bridged JWT for Supabase RLS
+  RLS: bridged JWT for authenticated queries; service role key for player reads + LLM proxy + submissions
+  Email: Resend for transactional emails (verification, password reset)
+  Player model: Single-page app at /:formId?v={nickname} — URL set once, never changes
+  Node tiers: page-tier (Start, End, Page, PageGroup, LLM nodes) have edges;
+    content-tier (card, likert, single_choice, multi_choice, email_collection, group)
+    are children of Page/PageGroup with no edges of their own
+  Container nodes (Page, PageGroup, Group) have no slugs — only content/LLM nodes do
+  Nickname/slug pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ (1-60 chars)
+  Concurrent editing: last write wins
+  Progress bar: checkpoint-based, opt-in per Page/PageGroup
+  Once-per-visitor: enforced via partial unique index on submissions
+  LLM: server is middle-man, pre-warms with system prompt, strips sensitive fields
+  LLM provider: form owner specifies provider + model per real_llm node
+  Rate limiting: per-visitor + per-IP on LLM proxy, per-IP on submissions (Supabase)
+  WYSIWYG: Milkdown Crepe with image/file upload to Supabase Storage
