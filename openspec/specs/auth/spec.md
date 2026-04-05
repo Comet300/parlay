@@ -19,6 +19,7 @@ The system SHALL configure BetterAuth in app/lib/auth/server.ts:
 
 ```typescript
 import { betterAuth } from "better-auth";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Pool } from "pg";
 
 export const auth = betterAuth({
@@ -53,6 +54,7 @@ export const auth = betterAuth({
       "/forget-password/*": { window: 60, max: 3 },
     },
   },
+  plugins: [tanstackStartCookies()], // must be last — handles cookie setting for TanStack Start
 });
 ```
 
@@ -89,7 +91,20 @@ point to `{APP_BASE_URL}/api/auth/callback/google`.
 
 ### Requirement: BetterAuth client configuration
 The system SHALL configure the BetterAuth client in app/lib/auth/client.ts
-for use in React components (sign in, sign up, sign out, session access).
+for use in React components (sign in, sign up, sign out, session access):
+
+```typescript
+import { createAuthClient } from "better-auth/client";
+
+export const authClient = createAuthClient();
+
+// Key methods:
+// authClient.signIn.email({ email, password })
+// authClient.signIn.social({ provider: "google" })
+// authClient.signUp.email({ email, password, name })
+// authClient.signOut()
+// authClient.useSession() — React hook returning { data: session, isPending }
+```
 
 ### Requirement: Email transport via Resend
 The system SHALL use Resend (npm: `resend`) for all transactional emails:
@@ -108,6 +123,19 @@ via a server function or route loader context, computed as
 The /login and /signup pages SHALL use this flag to conditionally render
 Google OAuth buttons. Environment variables are server-side only — the
 client cannot check them directly.
+
+### Requirement: Login page
+The system SHALL provide a /login page with:
+- Email input field
+- Password input field
+- "Log in" submit button
+- Google OAuth "Sign in with Google" button (only if `googleOAuthEnabled`)
+- "Forgot password?" link navigating to /forgot-password
+- Link to /signup for new users ("Don't have an account? Sign up")
+- Inline error display for invalid credentials, rate limiting (429),
+  and network errors
+- On successful login, redirect to the `redirect` search param if present,
+  otherwise redirect to /dashboard
 
 ### Requirement: Account creation (signup)
 The system SHALL provide a /signup page with:
@@ -164,7 +192,19 @@ Child routes access the authenticated user via `Route.useRouteContext()`.
 ### Requirement: Server-side identity validation
 The system SHALL validate user identity server-side using the BetterAuth
 session on all protected server functions and API routes.
-BetterAuth provides server-side session validation via `auth.api.getSession()`.
+BetterAuth provides server-side session validation via
+`auth.api.getSession({ headers: request.headers })` — the `headers`
+parameter is required so BetterAuth can read session cookies:
+
+```typescript
+const session = await auth.api.getSession({
+  headers: request.headers,
+});
+if (!session) {
+  return new Response('Unauthorized', { status: 401 });
+}
+// session.user.id is the BetterAuth user ID
+```
 
 ### Requirement: Server route middleware for auth
 Protected server routes (e.g., /api/export) SHALL use TanStack Start's
@@ -179,16 +219,16 @@ export const Route = createFileRoute('/api/export/$facetId')({
     middleware: [authMiddleware],
     handlers: {
       GET: async ({ request, context }) => {
-        // context.user is populated by authMiddleware
+        // context.user and context.supabase populated by authMiddleware
       },
     },
   },
 });
 ```
 
-The auth middleware SHALL validate the BetterAuth session, create a
-bridged Supabase client, and pass both `user` and `supabase` on the
-context. Unauthenticated requests SHALL receive a 401 response.
+The auth middleware SHALL call `auth.api.getSession({ headers })`,
+create a bridged Supabase client, and pass both `user` and `supabase`
+on the context. Unauthenticated requests SHALL receive a 401 response.
 
 ### Requirement: BetterAuth database connection
 BetterAuth connects directly to PostgreSQL via `pg` Pool using the
@@ -235,7 +275,7 @@ export function createAuthenticatedSupabaseClient(betterAuthUserId: string) {
 A new client must be created per request since different requests have
 different user IDs. The `accessToken` callback is the official Supabase
 approach for third-party JWT integration (setting custom `Authorization`
-headers is deprecated).
+headers is deprecated). This requires `@supabase/supabase-js` v2 >=2.49.0.
 
 This allows `auth.uid()` in RLS policies to return the BetterAuth user ID.
 The `forms.user_id` column SHALL store the BetterAuth user ID (from

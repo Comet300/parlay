@@ -32,8 +32,9 @@ card, group) do NOT have their own edges. They exist as children inside
 Page/PageGroup containers. The only exception is Card button handles,
 which create sourceHandle edges from within a Page/PageGroup.
 
-Start -> End directly (with no Pages between) is NOT a valid flow.
-The system SHALL show a warning if the only path is Start -> End.
+Start -> End directly (with no Pages between) is a valid flow. It
+renders only the Start screen (if it has WYSIWYG content) followed by the
+End screen. No warning is shown for this configuration.
 
 ### Requirement: Node containment constraint
 The system SHALL require all content-tier nodes (card, likert, single_choice,
@@ -64,7 +65,7 @@ The system SHALL reject invalid drops with a visible inline error indicator.
 ### Requirement: Start node edge constraint
 The system SHALL allow exactly one outgoing edge from the Start node.
 If the user draws a second edge from Start, the system SHALL show a warning
-in the node editor panel.
+in the node config popup.
 
 ### Requirement: End node edge constraint
 The system SHALL allow zero outgoing edges from the End node.
@@ -73,13 +74,28 @@ The system SHALL allow multiple incoming edges to End from any page-tier node.
 ### Requirement: Dead path validation
 The system SHALL validate that every page-tier node except the End node
 has at least one outgoing edge. Nodes without outgoing edges SHALL display
-a red warning indicator on the canvas node and in the side panel.
+a red warning indicator on the canvas node and in the node config popup.
 For Card nodes: every button's sourceHandle SHALL have an outgoing edge.
 Buttons without edges SHALL display a warning indicator.
 The system SHALL show a summary warning in the builder toolbar if any
 dead paths exist (e.g., "2 nodes have no outgoing edges").
 Dead path warnings SHALL NOT block saving but SHALL block publishing
 (draft -> active transition).
+
+### Requirement: Publish validation checklist
+The system SHALL block the draft -> active transition if ANY of the
+following conditions are true:
+- Dead paths exist (page-tier nodes without outgoing edges, Card buttons
+  without outgoing edges)
+- Slug conflicts exist (two or more content nodes share the same slug)
+- A real_llm node references a provider not configured in the form owner's
+  LiteLLM settings (the system SHALL validate provider availability at
+  publish time; if LiteLLM accepts the provider, Parlay accepts it)
+
+The system SHALL NOT require Pages between Start and End. A valid flow
+may consist of just Start (with WYSIWYG content) -> End (with WYSIWYG
+content) and no intermediate nodes. This allows simple intro/thank-you
+forms.
 
 ### Requirement: Auto-save mechanics
 The system SHALL debounce-save the complete React Flow state (nodes, edges,
@@ -92,10 +108,30 @@ If the same facet is open in multiple browser tabs, each tab auto-saves
 independently using a last-write-wins strategy. No optimistic locking or
 conflict detection is implemented.
 
-### Requirement: Right panel tab structure
-The system SHALL display a tabbed right panel with two tabs:
-- "Node" tab (default): context-sensitive editor for the currently selected node
-- "Form Settings" tab: color scheme, component gallery carousel, round-robin toggle
+### Requirement: Node config popup
+When a node is selected on the canvas (single-click or tap), the system
+SHALL open a floating popup/modal showing the context-sensitive editor
+for that node. This popup pattern applies on BOTH desktop and mobile.
+The popup SHALL be dismissible (click outside, Escape key, or close button).
+Deselecting the node on the canvas SHALL also close the popup.
+
+### Requirement: Form Settings access
+The builder toolbar SHALL include a "Form Settings" button that opens a
+side panel (desktop) or slide-over menu (mobile) containing:
+- Color scheme configuration (theme picker, color pickers)
+- Component gallery carousel
+- Round-robin toggle (when the form has >1 facet)
+
+### Requirement: Mobile builder layout
+On mobile viewports (< 768px), the builder SHALL:
+- Render the React Flow canvas as the primary view with standard
+  touch pan/zoom gestures (pinch-to-zoom, drag-to-pan)
+- Move all non-canvas content (toolbar actions, Form Settings, facet
+  switcher) into slide-over side menus accessible via toolbar icons,
+  preventing collision between side panel scrolling and canvas pan/zoom
+- Open node config as a popup/modal (same as desktop)
+- Show a compact toolbar at the top with essential actions only
+  (back, form title, menu icon for additional actions)
 
 ### Requirement: Builder toolbar
 The builder toolbar (top of the builder page) SHALL contain, in order:
@@ -108,7 +144,8 @@ The builder toolbar (top of the builder page) SHALL contain, in order:
   - Draft facet: "Publish" button (primary style)
   - Active facet: "Unpublish" button (secondary style) + copy public URL button
   - Archived facet: "Re-activate" button
-  Publish is blocked if dead paths exist (shows error tooltip).
+  Publish is blocked if any publish validation fails (see publish
+  validation checklist requirement). Shows an error tooltip listing all blockers.
 
 ### Requirement: Canvas node visual indicators
 Every canvas node (except Start/End) SHALL display:
@@ -154,3 +191,33 @@ Every canvas node (except Start/End) SHALL display:
 - WHEN they drag from the Likert's handle
 - THEN the system rejects the edge (content-tier nodes cannot have edges)
 - AND shows a toast: "Only pages and LLM nodes can be connected by edges"
+
+#### Scenario: Publish blocked by slug conflict
+- GIVEN two content nodes both have slug "q-age"
+- WHEN the user attempts to publish the facet
+- THEN the system blocks the transition with an error listing the conflict
+- AND both nodes are highlighted with a warning indicator
+
+#### Scenario: Publish blocked by missing provider
+- GIVEN a real_llm node references provider "anthropic"
+- AND the form owner has not configured an "anthropic" provider in settings
+- WHEN the user attempts to publish
+- THEN the system blocks the transition with an error:
+  "LLM node '{label}' references unconfigured provider 'anthropic'"
+
+#### Scenario: Mobile builder canvas interaction
+- GIVEN the user is on /build/:facetId at 375px width
+- WHEN the page renders
+- THEN the React Flow canvas fills the viewport with touch pan/zoom
+- AND the toolbar is compact with a menu icon for overflow actions
+- WHEN the user taps a node on the canvas
+- THEN a node config popup opens over the canvas
+- WHEN the user taps the Form Settings toolbar icon
+- THEN a slide-over menu appears from the side with color scheme and settings
+
+#### Scenario: Node config popup on desktop
+- GIVEN the user is on /build/:facetId at 1280px width
+- WHEN the user clicks a Likert node on the canvas
+- THEN a floating popup opens showing the Likert editor fields
+- WHEN the user clicks elsewhere on the canvas (deselects the node)
+- THEN the popup closes

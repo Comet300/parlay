@@ -26,7 +26,7 @@ The card canvas node SHALL display:
 - A red warning indicator per button handle that has no outgoing edge
 
 ### Requirement: Side panel editor
-The card side panel SHALL include:
+The card node config popup SHALL include:
 - A Milkdown Crepe editor for markdownContent (with image/file upload support)
 - A button list manager with:
   - Add button control
@@ -59,7 +59,7 @@ Question nodes always follow their single outgoing edge.
 ### Requirement: Dead path validation for buttons
 If a card button has no outgoing edge drawn from its sourceHandle, the
 system SHALL show a red warning indicator on the canvas node and in the
-side panel. Dead path warnings SHALL block publishing (see builder-canvas
+node config popup. Dead path warnings SHALL block publishing (see builder-canvas
 spec dead path validation requirement).
 
 #### Scenario: Card with two routing buttons

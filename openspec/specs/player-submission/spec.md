@@ -29,8 +29,11 @@ CREATE UNIQUE INDEX idx_submissions_once_per_visitor
   ON submissions(visitor_id, facet_id) WHERE is_complete = true;
 ```
 
-RLS: public INSERT (respondents create rows), owner SELECT via
-form_id -> forms.user_id.
+RLS: enabled with NO public INSERT policy. All writes (submission creation)
+are performed via the Supabase service role key in the /api/submit server
+route, which bypasses RLS entirely. This prevents respondents from directly
+inserting submissions and bypassing server-side rate limiting and validation.
+Owner SELECT via form_id -> forms.user_id for dashboard/export access.
 
 The partial unique index on (visitor_id, facet_id) WHERE is_complete = true
 enforces once-per-visitor at the database level.
@@ -54,8 +57,10 @@ CREATE TABLE responses (
 CREATE INDEX idx_responses_submission ON responses(submission_id);
 ```
 
-RLS: public INSERT, owner SELECT via submission_id -> submissions.form_id
--> forms.user_id.
+RLS: enabled with NO public INSERT policy. All writes are performed via
+the Supabase service role key in the /api/submit server route alongside
+the parent submission row. Owner SELECT via submission_id ->
+submissions.form_id -> forms.user_id for dashboard/export access.
 
 ### Requirement: Submission rate limiting
 The submission endpoint SHALL enforce rate limiting to prevent spam:
@@ -94,7 +99,8 @@ The endpoint SHALL:
 
 The endpoint SHALL NOT require an BetterAuth session (respondents are
 unauthenticated). It SHALL use the Supabase service role key to insert
-rows into submissions and responses tables (which have public INSERT RLS).
+rows into submissions and responses tables (no public RLS policies —
+all writes go through the service role key).
 
 ### Requirement: Submission record
 When the respondent reaches the End node and clicks Continue (or the End

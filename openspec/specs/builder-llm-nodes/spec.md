@@ -12,7 +12,7 @@ Both scripted_llm and real_llm are page-tier nodes. They exist at the
 canvas root level (like Pages and PageGroups) and are connected by edges
 in the flow graph. They do NOT live inside Page or PageGroup containers.
 They cannot contain child nodes — all configuration is in their own data
-fields, edited via the side panel.
+fields, edited via the node config popup.
 
 ### Requirement: Scripted LLM data schema
 The scripted_llm node data SHALL include:

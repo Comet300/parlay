@@ -1,9 +1,10 @@
 # builder-color-scheme Specification
 
 ## Purpose
-Define the color scheme configuration UI in the Form Settings tab of the
+Define the color scheme configuration UI in the Form Settings panel of the
 builder, including pre-defined themes, color pickers, and the component
-gallery carousel.
+gallery carousel. Form Settings is accessed via a side panel (desktop) or
+slide-over menu (mobile) — see builder-canvas spec.
 
 ## Requirements
 
@@ -28,7 +29,7 @@ export const THEMES: ColorTheme[] = [
 ```
 
 ### Requirement: Theme picker dropdown
-The system SHALL show a theme picker dropdown in the Form Settings tab.
+The system SHALL show a theme picker dropdown in the Form Settings panel.
 Selecting a named theme SHALL populate all three color pickers with the
 corresponding values and update color_scheme.theme.
 "Custom" SHALL appear as a disabled/display-only option in the dropdown
@@ -45,7 +46,7 @@ as flow_definition changes. Both are written to the facets row together.
 
 ### Requirement: Component gallery carousel
 The system SHALL render a horizontally scrollable carousel in the Form
-Settings tab showing all renderable node types in preview={true} mode.
+Settings panel showing all renderable node types in preview={true} mode.
 The carousel SHALL apply the current color_scheme values as inline CSS
 custom properties (--color-primary, --color-accent, --color-background)
 so previews update live as the user changes colors.
@@ -54,7 +55,7 @@ Email Collection, Card, Scripted LLM (static chat bubbles), Real LLM
 (free-text chat UI stub).
 
 ### Requirement: Round-robin sub-section
-The Form Settings tab SHALL include a round-robin sub-section that is
+The Form Settings panel SHALL include a round-robin sub-section that is
 only visible when the form has more than one facet.
 This sub-section SHALL show a toggle for round_robin_enabled.
 When toggled OFF with multiple active facets: an inline prompt SHALL
@@ -63,7 +64,7 @@ is committed.
 When toggled ON: the default facet constraint is lifted.
 
 #### Scenario: Theme selection updates pickers
-- GIVEN the Form Settings tab is open with theme "Default" selected
+- GIVEN the Form Settings panel is open with theme "Default" selected
 - WHEN the user selects "Ocean" from the theme dropdown
 - THEN primary is set to #0891b2, accent to #0ea5e9, background to #f0f9ff
 - AND all three color pickers update to show the new values
@@ -77,7 +78,7 @@ When toggled ON: the default facet constraint is lifted.
 - AND accent and background retain their Forest values
 
 #### Scenario: Gallery live preview
-- GIVEN the Form Settings tab is open
+- GIVEN the Form Settings panel is open
 - WHEN the user drags the primary color picker
 - THEN every carousel item re-renders in real time showing the new color
 - AND no page reload or save is required for the preview

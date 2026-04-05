@@ -25,7 +25,9 @@ all executed server-side after receiving visitor_id from the client:
    a. Check round_robin_log for existing (visitor_id + form_id) assignment.
    b. If found:
       - Look up the assigned facet's current status
-      - If the facet is active -> set URL to ?v={stored facet_nickname}
+      - If the facet is active -> set URL to ?v={facet's current nickname}
+        (use the facet row's current nickname, NOT the round_robin_log
+        snapshot — the facet may have been renamed since assignment)
       - If the facet is archived -> render FormUnavailable page
    c. If not found:
       i. If round_robin_enabled = false:

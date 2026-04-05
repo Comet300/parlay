@@ -5,6 +5,9 @@ context: |
   React Flow v12, Milkdown Crepe, Zustand, TailwindCSS, FingerprintJS v5.1,
   Framer Motion, Resend
   Deployment target: Vercel (free tier compatible)
+  Vercel config: vercel.json sets maxDuration per route —
+    /api/llm-proxy: 60s (streaming LLM responses),
+    /api/submit: 30s, /api/export/*: 30s, default: 10s
   Conversation sessions: Supabase llm_conversations table (NOT in-memory)
   Rate limiting: Supabase rate_limit_log table
   Domain: SaaS visual interview/survey flow builder

@@ -16,19 +16,25 @@ The settings page SHALL provide a LiteLLM configuration section with:
       input option for unlisted providers)
     - Model text input (e.g. "gpt-4o", "claude-sonnet-4-20250514") — informational,
       helps the user remember which model they configured. The actual model
-      used per node is set in the builder's real_llm side panel.
+      used per node is set in the builder's real_llm node config popup.
     - API key input (masked/password type)
 - Add row and remove row controls for the dynamic list
 - A Save button that triggers the save operation
 
 The provider names configured here populate the Provider dropdown in the
-real_llm node side panel in the builder.
+real_llm node config popup in the builder.
 
 ### Requirement: API key encryption
 On save, the system SHALL encrypt all API key values using Supabase Vault
 before writing to user_profiles.litellm_api_keys. The system SHALL write
 litellm_base_url and litellm_api_keys to the user_profiles row for the
 authenticated user.
+
+All Vault operations (`vault.create_secret`, `vault.delete_secret`) require
+elevated privileges. The settings save server function SHALL use the
+**Supabase service role key** for Vault encryption/decryption calls, while
+using the bridged JWT for reading/writing the `user_profiles` row itself
+(so RLS still enforces ownership on the profile data).
 
 ```sql
 -- Store an API key in Vault (returns a UUID as the secret ID)

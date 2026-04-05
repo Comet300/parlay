@@ -196,8 +196,33 @@ SELECT cron.schedule('cleanup-llm-conversations', '0 3 * * *',
 );
 ```
 
-RLS: public INSERT/UPDATE (respondents create and append messages),
-owner SELECT via form_id -> forms.user_id.
+RLS: enabled with NO public policies. All access (INSERT for creating
+conversations, UPDATE for appending messages, SELECT for reading history)
+is performed via the Supabase service role key in the /api/llm-proxy
+server route, which bypasses RLS entirely. This prevents respondents
+from directly reading or manipulating conversation state (including the
+system_context field which contains the hidden setup_prompt).
+Owner SELECT via form_id -> forms.user_id for dashboard/analytics access.
+
+### Requirement: rate_limit_log RLS
+RLS SHALL be enabled on rate_limit_log. No public RLS policies SHALL be
+created — all access (INSERT for rate tracking, SELECT for rate checking,
+DELETE for cleanup) is performed via the Supabase service role key, which
+bypasses RLS entirely. This prevents public users from reading or
+manipulating rate limit state directly.
+
+### Requirement: Mid-conversation resume behavior
+If a respondent closes the browser mid-real_llm-conversation and later
+resumes the session, the client SHALL re-initialize the conversation with
+the server by sending a new `action: "init"` request. The server SHALL
+create a fresh conversation row and return a new first bot message. The
+previous incomplete conversation row in `llm_conversations` is abandoned
+(it will be cleaned up by the daily pg_cron job).
+
+The respondent starts the LLM conversation over from scratch — partial
+conversation state is NOT restored. The player-session localStorage still
+tracks `visitedPageIds` so the respondent lands back on the LLM node's
+position in the flow, but the conversation itself begins anew.
 
 ### Requirement: Conversation data for submission
 The full conversation (excluding the system prompt) SHALL be stored on
@@ -288,6 +313,16 @@ The Technical Issue page is a runtime error during an active session.
 - WHEN they send another message
 - THEN the system returns HTTP 429 with Retry-After header
 - AND the player shows "Please wait a moment before sending another message"
+
+#### Scenario: Resume after browser close mid-conversation
+- GIVEN a respondent was on a real_llm node and closed the browser mid-conversation
+- AND the localStorage session has the LLM node in visitedPageIds
+- WHEN the respondent returns and resumes the session
+- THEN the player navigates back to the LLM node's position in the flow
+- AND the client sends a fresh action: "init" request to /api/llm-proxy
+- AND the server creates a new conversation row (the old one is abandoned)
+- AND the respondent starts the LLM conversation from scratch
+- AND the previous incomplete conversation is cleaned up by the daily pg_cron job
 
 #### Scenario: Streaming error aborts form
 - GIVEN a real_llm conversation is streaming a response

@@ -47,13 +47,15 @@ to prevent duplicate assignments from concurrent requests:
 On conflict (concurrent duplicate), the system SHALL use the existing
 assignment rather than inserting a second row.
 
-RLS: public INSERT, owner SELECT only.
+RLS: enabled with NO public INSERT policy. All writes (assignment logging)
+are performed via the Supabase service role key during facet resolution,
+which bypasses RLS entirely. Owner SELECT only for dashboard/analytics.
 This log SHALL be retained permanently for analytics — never deleted
 (except via CASCADE when the form or facet is deleted).
 
 ### Requirement: Toggle behavior
 The system SHALL allow round_robin_enabled to be toggled on forms from
-the builder's Form Settings tab.
+the builder's Form Settings panel.
 When toggled OFF with multiple active facets: the system SHALL prompt the
 user to select a default facet before committing the toggle.
 When toggled ON: the default facet requirement is cleared.
@@ -80,7 +82,8 @@ SHALL assign that facet directly without incrementing the counter.
 - GIVEN visitor_id "abc123" was previously assigned to facet "horizon"
 - WHEN the same visitor loads /:formId again
 - THEN the system finds their round_robin_log entry
-- AND sets the URL to ?v=horizon without incrementing the counter
+- AND sets the URL to ?v={horizon's current nickname} without incrementing
+  the counter (uses the facet row's current nickname, not the log snapshot)
 
 #### Scenario: Toggle OFF prompt
 - GIVEN a form has round_robin_enabled = true and 3 active facets

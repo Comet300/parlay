@@ -1,7 +1,7 @@
 # builder-nodes Specification
 
 ## Purpose
-Define the data schema, side panel editor fields, canvas appearance, and
+Define the data schema, node config popup editor fields, canvas appearance, and
 node type registry for all node types in the builder.
 
 ## Requirements
@@ -115,12 +115,12 @@ Nodes are organized into tiers that determine where they can exist:
 LLM nodes (scripted_llm, real_llm) are page-tier because they take over
 the full viewport. They cannot contain child nodes — their configuration
 (script turns, setup prompt, etc.) is stored in the node's own data fields,
-edited via the side panel.
+edited via the node config popup.
 
 ### Requirement: Slug purpose and visibility
 Slugs are internal identifiers used exclusively for referencing nodes in
 formula condition expressions (e.g., `q-age > 18`). Slugs are NOT displayed
-to respondents in the player UI. They appear only in the builder side panel
+to respondents in the player UI. They appear only in the builder node config popup
 for the form creator.
 
 ### Requirement: Slug auto-generation
@@ -129,7 +129,7 @@ slugify to lowercase, strip non-alphanumeric characters (except hyphens),
 replace spaces with hyphens, collapse consecutive hyphens, trim leading/
 trailing hyphens, truncate to 60 characters.
 The system SHALL show an inline validation error for duplicate or
-invalid-pattern slugs in the side panel.
+invalid-pattern slugs in the node config popup.
 The system SHALL prevent saving while a slug conflict exists.
 
 ### Requirement: Node type registry
@@ -158,7 +158,7 @@ mockup using no hooks or effects requiring real session state.
 This is required for use in the color scheme component gallery carousel.
 
 ### Requirement: Side panel common fields
-The "Node" tab in the right panel SHALL show for content-tier nodes
+The node config popup SHALL show for content-tier nodes
 (not containers, not Start/End):
 - Slug field (editable text input with validation)
 - Show if field (formula condition input with autocomplete)
@@ -168,7 +168,7 @@ Additionally for question nodes (likert, single_choice, multi_choice)
 and email_collection:
 - Required checkbox (default true)
 
-For Page (container panel):
+For Page (container popup):
 - Show if field (formula condition input)
 - Allow back checkbox (default false)
 - Show progress bar checkbox (default false)
@@ -176,7 +176,7 @@ For Page (container panel):
   is enabled on any Page/PageGroup in the flow)
 - Header content: Milkdown WYSIWYG editor for headerContent
 
-For PageGroup (container panel):
+For PageGroup (container popup):
 - All Page fields above, plus:
 - Max questions per page number input
 - Shuffle children checkbox (default false)
@@ -187,13 +187,13 @@ For Group:
 - Show if field (formula condition input)
 - Shuffle children checkbox (default false)
 
-For scripted_llm and real_llm (page-tier, side panel):
+For scripted_llm and real_llm (page-tier, node config popup):
 - Slug field, Show if field, Record response checkbox (base content fields)
 - Plus their specific configuration fields (see builder-llm-nodes spec)
 
 ### Requirement: Node deletion
 Nodes SHALL be deletable via the Delete/Backspace key when selected on
-the canvas, or via a "Delete" button in the side panel.
+the canvas, or via a "Delete" button in the node config popup.
 When a container node (Page, PageGroup, Group) is deleted, all its
 children SHALL be deleted as well.
 When any node is deleted, all edges connected to it (incoming and outgoing)
@@ -289,11 +289,12 @@ integration handles Crepe lifecycle (`create()` / `destroy()`)
 automatically via the `useEditor` hook.
 
 ### Requirement: Start and End node editors
-Start and End SHALL open the Milkdown Crepe editor in the right panel
+Start and End SHALL open the Milkdown Crepe editor in the node config popup
 when selected. Start content is shown as the form intro screen. End content
 is shown as the form completion/thank-you screen.
-A form with only Start -> End and no Pages in between is a broken/empty
-form that renders nothing meaningful to the respondent.
+A form with only Start -> End and no Pages in between is valid — it
+renders the Start WYSIWYG screen followed by the End WYSIWYG screen.
+This is useful for simple announcements or consent-only flows.
 
 ### Requirement: Page and PageGroup canvas nodes
 Page nodes SHALL render as React Flow native subgraph containers with a
@@ -303,18 +304,18 @@ Children SHALL be draggable in and out of containers on the canvas.
 
 ### Requirement: Group canvas node
 Group nodes SHALL render as a lighter bordered subgraph inside their parent
-Page or PageGroup. The shuffle toggle SHALL be visible in the side panel editor.
+Page or PageGroup. The shuffle toggle SHALL be visible in the node config popup editor.
 
-### Requirement: Scripted LLM side panel
-The scripted_llm side panel SHALL show a decision-tree script editor:
+### Requirement: Scripted LLM node config popup
+The scripted_llm node config popup SHALL show a decision-tree script editor:
 a list of turns, each with:
 - Bot message textarea
 - Options list: each option has a label input and a next-turn dropdown
   populated with all turn IDs plus "End conversation" (nextTurnId = null)
 - Add turn / remove turn controls
 
-### Requirement: Real LLM side panel
-The real_llm side panel SHALL show:
+### Requirement: Real LLM node config popup
+The real_llm node config popup SHALL show:
 - Provider dropdown (populated from the owner's configured providers in
   settings — e.g. "openai", "anthropic", "google"). If no providers are
   configured, show a warning linking to /settings.
@@ -333,7 +334,7 @@ The real_llm side panel SHALL show:
 
 #### Scenario: Node type registry dynamic panel
 - GIVEN the user selects a Likert node on the canvas
-- WHEN the right panel renders
+- WHEN the node config popup renders
 - THEN the system looks up the Likert NodeTypeDescriptor from the registry
 - AND renders the Likert editorComponent in the Node tab
 

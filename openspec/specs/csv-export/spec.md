@@ -43,12 +43,18 @@ The sparse matrix SHALL be built as follows:
 Columns in order:
   submission_id, submitted_at, is_complete, respondent_email,
   facet_nickname, then one column per content node (with record_response = true)
-  in BFS (breadth-first search) graph traversal order starting from the
-  Start node. Within each page-tier container, children appear in canvas
-  position order (top-to-bottom). BFS ensures a natural left-to-right
-  reading of the flow graph; branches visited at the same depth appear
-  in edge-order. Column headers use the current node_label from
-  flow_definition.
+  ordered by position in the interview flow: nodes that appear earlier in
+  the respondent's journey produce columns that appear earlier in the CSV.
+
+  Ordering rules:
+  - Traverse the directed graph starting from the Start node
+  - Within each page-tier container, children appear in canvas position
+    order (top-to-bottom)
+  - When the graph branches (e.g., via Card button edges), group each
+    branch's columns together contiguously
+  - Branch ordering tiebreaker: alphabetical by the slug of the first
+    content node on each branch
+  - Column headers use the current node_label from flow_definition
 
 Value formatting:
   Multi-choice: join selected option labels with semicolon (;)

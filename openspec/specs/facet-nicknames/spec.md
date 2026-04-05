@@ -20,6 +20,11 @@ The system SHALL maintain a facet_nickname_history table:
 - old_nickname: text not null
 - changed_at: timestamptz default now()
 
+RLS: enabled. Owner INSERT/SELECT via facet_id -> facets.form_id ->
+forms.user_id = auth.uid(). No public access — nickname renames are
+authenticated owner actions. The 3xx redirect lookup uses the service
+role key (part of facet resolution in the player).
+
 ### Requirement: History on rename
 When a facet is renamed, the system SHALL:
 1. Insert the old nickname into facet_nickname_history

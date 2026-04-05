@@ -7,7 +7,7 @@ analyze responses from their dashboard.
 
 ## Tech Stack
 - Framework: TanStack Start, TypeScript strict mode
-- Database: Supabase (Postgres + RLS + Storage + Vault)
+- Database: Supabase (Postgres + RLS + Storage + Vault), @supabase/supabase-js v2 (>=2.49.0 required for `accessToken` callback)
 - Auth: BetterAuth (email/password + Google OAuth)
 - Email: Resend (verification, password reset)
 - Canvas: React Flow v12

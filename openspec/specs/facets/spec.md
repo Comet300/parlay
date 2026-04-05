@@ -153,7 +153,7 @@ locking or conflict detection. The most recent save overwrites prior state.
 - AND clears the unsaved indicator dot in the toolbar
 
 #### Scenario: Auto-save after color scheme change
-- GIVEN the user changes the primary color in the Form Settings tab
+- GIVEN the user changes the primary color in the Form Settings panel
 - WHEN 2 seconds pass without further changes
 - THEN the system saves color_scheme to Supabase on the same debounce
 

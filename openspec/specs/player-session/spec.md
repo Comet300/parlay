@@ -14,7 +14,7 @@ parlay_session_{formId} with the following structure:
 ```typescript
 interface RespondentSession {
   facetNickname: string;
-  visitedPageIds: string[];                        // ordered IDs of Pages/PageGroups visited
+  visitedPageIds: string[];                        // ordered IDs of page-tier nodes visited (Page, PageGroup, scripted_llm, real_llm)
   currentVirtualPageIndex: Record<string, number>; // pageGroupId -> current virtual page index
   responses: Record<string, unknown>;              // nodeSlug -> value (always tracked for content nodes)
   shuffleSeeds: Record<string, number>;            // nodeId/groupId -> random seed
