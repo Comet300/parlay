@@ -120,3 +120,6 @@ Adjust any implementation detail that conflicts with current APIs before writing
 | settings | LiteLLM config (provider + model + API key), account management |
 | landing-page | Navbar, hero, demo, features, CTA sections |
 | form-unavailable | Archived form / no active facets page |
+| project-scaffold | TanStack Start setup, dependencies, routes, auth wiring, Zustand, env vars |
+| database-schema | Supabase migration: tables, indexes, triggers, RLS, pg_cron |
+| deployment | Vercel config, per-route timeouts, build pipeline, env var management |
