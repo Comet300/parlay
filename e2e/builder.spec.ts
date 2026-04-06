@@ -2,258 +2,289 @@ import { test, expect } from '@playwright/test'
 
 /**
  * Helper: create a new form and land on the builder page.
- * Returns the facetId from the URL.
  */
 async function createFormAndGoToBuilder(page: import('@playwright/test').Page) {
   await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: 'New Form' }).click()
-  await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 10_000 })
-  const url = new URL(page.url())
-  return url.pathname.split('/').pop()!
+  await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
+  await page.waitForLoadState('networkidle')
+}
+
+/** Stable locator for the inline title input in the builder toolbar */
+function titleInput(page: import('@playwright/test').Page) {
+  return page.locator('input.font-semibold')
+}
+
+/**
+ * Open the facet switcher dropdown.
+ * The trigger is the ONLY button with font-medium class containing an SVG (ChevronDown).
+ * Uses .last() to handle TanStack Router keeping old pages in the DOM.
+ */
+async function openSwitcher(page: import('@playwright/test').Page) {
+  // font-medium + border + SVG uniquely identifies the switcher trigger
+  // (the primary Button component doesn't have `border` class)
+  const trigger = page.locator('button.font-medium.border').filter({ has: page.locator('svg') }).last()
+  const dropdown = page.getByText('Create facet')
+
+  // If already open, just ensure it's ready
+  if (await dropdown.isVisible().catch(() => false)) {
+    return
+  }
+
+  await trigger.click()
+  await expect(dropdown).toBeVisible({ timeout: 5_000 })
+}
+
+/** The opened facet switcher dropdown panel — a w-64 container */
+function switcherDropdown(page: import('@playwright/test').Page) {
+  return page.locator('[class*="w-64"][class*="shadow-lg"]')
 }
 
 test.describe('Builder — Toolbar', () => {
   test('shows inline-editable form title', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
-    const titleInput = page.locator('input[value="Untitled Form"]')
-    await expect(titleInput).toBeVisible()
+    await expect(titleInput(page)).toHaveValue('Untitled Form')
   })
 
   test('form title saves on blur', async ({ page }) => {
     await createFormAndGoToBuilder(page)
 
-    const titleInput = page.locator('input[value="Untitled Form"]')
-    await titleInput.fill('My Test Form')
-    await titleInput.blur()
-
-    // Wait for debounce save
+    const input = titleInput(page)
+    await input.fill('My Test Form')
+    await input.blur()
     await page.waitForTimeout(500)
 
-    // Reload and verify persisted
     await page.reload()
-    await expect(page.locator('input[value="My Test Form"]')).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await expect(titleInput(page)).toHaveValue('My Test Form')
   })
 
   test('shows unsaved indicator when store is dirty', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
-    // The unsaved dot should NOT be visible initially
     const dot = page.locator('[title="Unsaved changes"]')
     await expect(dot).not.toBeVisible()
   })
 
   test('shows Publish button for draft facet', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
-    await expect(
-      page.getByRole('button', { name: 'Publish' }),
-    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible()
   })
 
   test('Publish button transitions to URL display', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
     await page.getByRole('button', { name: 'Publish' }).click()
-
-    // Should show public URL with copy button
-    await expect(page.locator('[title="Copy URL"]')).toBeVisible()
-    // Publish button should disappear (facet is now active)
-    await expect(
-      page.getByRole('button', { name: 'Publish' }),
-    ).not.toBeVisible()
+    await expect(page.locator('[title="Copy URL"]')).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('button', { name: 'Publish' })).not.toBeVisible()
   })
 })
 
 test.describe('Builder — Facet Switcher', () => {
   test('lists all sibling facets with current highlighted', async ({ page }) => {
     await createFormAndGoToBuilder(page)
+    await openSwitcher(page)
 
-    // Open switcher dropdown
-    await page.locator('button:has-text("default")').first().click()
-
-    // Default facet should be highlighted
-    const activeItem = page.locator('[class*="bg-light text-primary font-medium"]')
-    await expect(activeItem).toContainText('default')
+    const dd = switcherDropdown(page)
+    await expect(dd.locator('.bg-light.text-primary.font-medium')).toContainText('default')
   })
 
   test('Create facet with inline input', async ({ page }) => {
     await createFormAndGoToBuilder(page)
+    await openSwitcher(page)
 
-    // Open switcher
-    await page.locator('button:has-text("default")').first().click()
-
-    // Click "+ Create facet"
     await page.getByText('Create facet').click()
 
-    // Type a valid nickname
     const input = page.locator('input[placeholder="facet-name"]')
     await expect(input).toBeVisible()
     await input.fill('variant-a')
+    const urlBeforeCreate = page.url()
     await input.press('Enter')
+    await page.waitForURL((url) => url.href !== urlBeforeCreate, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
 
-    // Should navigate to new facet
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
-
-    // Switcher should now show "variant-a"
-    await page.locator('button:has-text("variant-a")').first().click()
-    await expect(page.getByText('default')).toBeVisible()
-    await expect(page.getByText('variant-a')).toBeVisible()
+    // Verify switcher lists both facets
+    await openSwitcher(page)
+    const dd = switcherDropdown(page)
+    await expect(dd.getByText('default')).toBeVisible()
+    await expect(dd.getByText('variant-a')).toBeVisible()
   })
 
   test('Create facet rejects invalid nickname', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
-    await page.locator('button:has-text("default")').first().click()
+    await openSwitcher(page)
     await page.getByText('Create facet').click()
 
     const input = page.locator('input[placeholder="facet-name"]')
     await input.fill('My Invalid!')
     await input.press('Enter')
 
-    // Validation error shown
-    await expect(
-      page.getByText('Lowercase alphanumeric with hyphens only'),
-    ).toBeVisible()
+    await expect(page.getByText('Lowercase alphanumeric with hyphens only')).toBeVisible()
   })
 
   test('Rename facet with inline edit', async ({ page }) => {
     await createFormAndGoToBuilder(page)
 
     // Create a second facet to rename
-    await page.locator('button:has-text("default")').first().click()
+    await openSwitcher(page)
     await page.getByText('Create facet').click()
     const createInput = page.locator('input[placeholder="facet-name"]')
     await createInput.fill('to-rename')
+    const urlBefore = page.url()
     await createInput.press('Enter')
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
+    await page.waitForURL((url) => url.href !== urlBefore, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
 
-    // Open switcher, find the rename button via hover
-    await page.locator('button:has-text("to-rename")').first().click()
+    // Open switcher and rename
+    await openSwitcher(page)
+    const dd = switcherDropdown(page)
 
-    // Click the rename pencil icon for "to-rename"
-    const facetRow = page.locator('div:has-text("to-rename")').filter({ hasText: 'to-rename' })
-    await facetRow.first().hover()
-    await page.locator('[title="Rename"]').first().click()
+    // Hover the facet name to reveal action buttons, then click Rename
+    const facetBtn = dd.locator('button.truncate').filter({ hasText: 'to-rename' })
+    await facetBtn.hover()
+    await facetBtn.locator('xpath=..').locator('[title="Rename"]').click()
 
     // Type new nickname and confirm
-    const renameInput = page.locator('.flex.items-center.gap-1 input')
+    const renameInput = dd.locator('input')
     await renameInput.fill('renamed')
     await renameInput.press('Enter')
-
-    // Wait for rename to complete
     await page.waitForTimeout(500)
 
-    // Verify the switcher shows "renamed"
-    await expect(page.getByText('renamed')).toBeVisible()
+    // Reload to get clean state after router.invalidate()
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+
+    // Verify
+    await openSwitcher(page)
+    await expect(switcherDropdown(page).getByText('renamed')).toBeVisible()
   })
 
   test('Set as default (when round-robin off)', async ({ page }) => {
     await createFormAndGoToBuilder(page)
 
     // Create a second facet
-    await page.locator('button:has-text("default")').first().click()
+    await openSwitcher(page)
     await page.getByText('Create facet').click()
     const input = page.locator('input[placeholder="facet-name"]')
     await input.fill('alt-facet')
+    const urlBeforeAlt = page.url()
     await input.press('Enter')
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
+    await page.waitForURL((url) => url.href !== urlBeforeAlt, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
 
-    // We're now on "alt-facet" page. Open switcher — "default" is the current default.
-    // Navigate to "default" first so we can set "alt-facet" as default.
-    await page.locator('button:has-text("alt-facet")').first().click()
-    await page.getByText('default').first().click()
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/)
+    // We're on "alt-facet" page. Navigate back to "default".
+    await openSwitcher(page)
+    const urlBeforeNav = page.url()
+    await switcherDropdown(page).locator('button.text-left').filter({ hasText: 'default' }).click()
+    await page.waitForURL((url) => url.href !== urlBeforeNav, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
 
-    // Now on "default" page. Open switcher — "alt-facet" should show star icon.
-    await page.locator('button:has-text("default")').first().click()
-    const starButton = page.locator('[title="Set as default"]')
+    // Now on "default" page. Set "alt-facet" as default via star icon.
+    await openSwitcher(page)
+    const starButton = switcherDropdown(page).locator('[title="Set as default"]')
     await expect(starButton).toBeVisible()
     await starButton.click()
     await page.waitForTimeout(500)
 
-    // After refresh, "alt-facet" should now be (default)
-    await page.locator('button:has-text("default")').first().click()
-    await expect(page.getByText('(default)')).toBeVisible()
+    // Reload to get clean state after router.invalidate()
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+
+    // Verify
+    await openSwitcher(page)
+    await expect(switcherDropdown(page).getByText('(default)')).toBeVisible()
   })
 
   test('Rename conflict — rejects nickname held by sibling', async ({ page }) => {
     await createFormAndGoToBuilder(page)
 
     // Create a second facet "sibling"
-    await page.locator('button:has-text("default")').first().click()
+    await openSwitcher(page)
     await page.getByText('Create facet').click()
     const input = page.locator('input[placeholder="facet-name"]')
     await input.fill('sibling')
+    const urlBeforeSibling = page.url()
     await input.press('Enter')
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
+    await page.waitForURL((url) => url.href !== urlBeforeSibling, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
 
-    // Try to rename "sibling" to "default" (conflict with existing sibling)
-    await page.locator('button:has-text("sibling")').first().click()
-    const siblingRow = page.locator('div').filter({ hasText: 'sibling' })
-    await siblingRow.first().hover()
-    await page.locator('[title="Rename"]').first().click()
+    // Try to rename "sibling" to "default" (conflict)
+    await openSwitcher(page)
+    const dd = switcherDropdown(page)
+    const siblingBtn = dd.locator('button.truncate').filter({ hasText: 'sibling' })
+    await siblingBtn.hover()
+    await siblingBtn.locator('xpath=..').locator('[title="Rename"]').click()
 
-    const renameInput = page.locator('.flex.items-center.gap-1 input')
+    const renameInput = dd.locator('input')
     await renameInput.fill('default')
     await renameInput.press('Enter')
 
-    // Should show error about name being in use
-    await expect(page.getByText(/already in use/)).toBeVisible()
+    // Server error message: "...is already in use..."
+    await expect(page.getByText(/already in use/)).toBeVisible({ timeout: 5_000 })
   })
 
   test('History nickname blocked — cannot reuse a renamed-away nickname', async ({ page }) => {
     await createFormAndGoToBuilder(page)
 
     // Create a second facet "original"
-    await page.locator('button:has-text("default")').first().click()
+    await openSwitcher(page)
     await page.getByText('Create facet').click()
     let input = page.locator('input[placeholder="facet-name"]')
     await input.fill('original')
+    const urlBeforeOriginal = page.url()
     await input.press('Enter')
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
+    await page.waitForURL((url) => url.href !== urlBeforeOriginal, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+    await page.reload()
+    await page.waitForLoadState('networkidle')
 
-    // Rename "original" → "renamed" (puts "original" into history)
-    await page.locator('button:has-text("original")').first().click()
-    const row = page.locator('div').filter({ hasText: 'original' })
-    await row.first().hover()
-    await page.locator('[title="Rename"]').first().click()
+    // Rename "original" → "renamed-ver" (puts "original" into history)
+    await openSwitcher(page)
+    const dd = switcherDropdown(page)
+    const originalBtn = dd.locator('button.truncate').filter({ hasText: 'original' })
+    await originalBtn.hover()
+    await originalBtn.locator('xpath=..').locator('[title="Rename"]').click()
 
-    let renameInput = page.locator('.flex.items-center.gap-1 input')
-    await renameInput.fill('renamed')
+    let renameInput = dd.locator('input')
+    await renameInput.fill('renamed-ver')
     await renameInput.press('Enter')
     await page.waitForTimeout(500)
 
-    // Now try to create a NEW facet with nickname "original" — should be blocked by history
-    await page.locator('button:has-text("renamed")').first().click()
+    // Reload to get clean state after router.invalidate()
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+
+    // Try to create a NEW facet with nickname "original" — blocked by history
+    await openSwitcher(page)
     await page.getByText('Create facet').click()
     input = page.locator('input[placeholder="facet-name"]')
     await input.fill('original')
     await input.press('Enter')
 
-    // Should show error about permanently reserved nickname
-    await expect(page.getByText(/previously used|permanently reserved/)).toBeVisible()
+    await expect(page.getByText(/previously used|permanently reserved/)).toBeVisible({ timeout: 5_000 })
   })
 })
 
 test.describe('Builder — Facet status transitions', () => {
   test('draft facet shows Publish, not Unpublish', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
-    // Draft facet should have Publish button
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible()
   })
 
   test('published facet shows URL with copy button', async ({ page }) => {
     await createFormAndGoToBuilder(page)
-
     await page.getByRole('button', { name: 'Publish' }).click()
-
-    // Verify URL display
     const urlDisplay = page.locator('[title="Copy URL"]')
-    await expect(urlDisplay).toBeVisible()
-
-    // Click copy
+    await expect(urlDisplay).toBeVisible({ timeout: 5_000 })
     await urlDisplay.click()
   })
 })

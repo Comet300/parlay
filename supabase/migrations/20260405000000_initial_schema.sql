@@ -15,7 +15,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "extensions";
 -- 1. user_profiles (FK to BetterAuth's "user" table)
 -- ---------------------------------------------------------------------------
 CREATE TABLE user_profiles (
-  id                uuid PRIMARY KEY REFERENCES public."user"(id) ON DELETE CASCADE,
+  id                text PRIMARY KEY REFERENCES public."user"(id) ON DELETE CASCADE,
   litellm_base_url  text,
   litellm_api_keys  jsonb
 );
@@ -37,7 +37,7 @@ CREATE TRIGGER trg_create_user_profile
 -- ---------------------------------------------------------------------------
 CREATE TABLE forms (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id               uuid NOT NULL REFERENCES public."user"(id),
+  user_id               text NOT NULL REFERENCES public."user"(id),
   title                 text NOT NULL,
   round_robin_enabled   boolean NOT NULL DEFAULT false,
   round_robin_counter   integer NOT NULL DEFAULT 0,
@@ -220,42 +220,42 @@ END; $$;
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "user_profiles_owner_select" ON user_profiles
-  FOR SELECT USING (id = auth.uid());
+  FOR SELECT USING (id = auth.jwt()->>'sub');
 CREATE POLICY "user_profiles_owner_update" ON user_profiles
-  FOR UPDATE USING (id = auth.uid());
+  FOR UPDATE USING (id = auth.jwt()->>'sub');
 
 -- forms: owner CRUD
 ALTER TABLE forms ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "forms_owner_select" ON forms
-  FOR SELECT USING (user_id = auth.uid());
+  FOR SELECT USING (user_id = auth.jwt()->>'sub');
 CREATE POLICY "forms_owner_insert" ON forms
-  FOR INSERT WITH CHECK (user_id = auth.uid());
+  FOR INSERT WITH CHECK (user_id = auth.jwt()->>'sub');
 CREATE POLICY "forms_owner_update" ON forms
-  FOR UPDATE USING (user_id = auth.uid());
+  FOR UPDATE USING (user_id = auth.jwt()->>'sub');
 CREATE POLICY "forms_owner_delete" ON forms
-  FOR DELETE USING (user_id = auth.uid());
+  FOR DELETE USING (user_id = auth.jwt()->>'sub');
 
 -- facets: owner full access + public SELECT on active
 ALTER TABLE facets ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "facets_owner_select" ON facets
   FOR SELECT USING (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 CREATE POLICY "facets_public_select" ON facets
   FOR SELECT USING (status = 'active');
 CREATE POLICY "facets_owner_insert" ON facets
   FOR INSERT WITH CHECK (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 CREATE POLICY "facets_owner_update" ON facets
   FOR UPDATE USING (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 CREATE POLICY "facets_owner_delete" ON facets
   FOR DELETE USING (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 
 -- facet_nickname_history: owner INSERT/SELECT via chain
@@ -266,7 +266,7 @@ CREATE POLICY "fnh_owner_select" ON facet_nickname_history
     facet_id IN (
       SELECT f.id FROM facets f
       JOIN forms fo ON fo.id = f.form_id
-      WHERE fo.user_id = auth.uid()
+      WHERE fo.user_id = auth.jwt()->>'sub'
     )
   );
 CREATE POLICY "fnh_owner_insert" ON facet_nickname_history
@@ -274,7 +274,7 @@ CREATE POLICY "fnh_owner_insert" ON facet_nickname_history
     facet_id IN (
       SELECT f.id FROM facets f
       JOIN forms fo ON fo.id = f.form_id
-      WHERE fo.user_id = auth.uid()
+      WHERE fo.user_id = auth.jwt()->>'sub'
     )
   );
 
@@ -283,7 +283,7 @@ ALTER TABLE round_robin_log ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "rrl_owner_select" ON round_robin_log
   FOR SELECT USING (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 
 -- submissions: no public INSERT, owner SELECT
@@ -291,7 +291,7 @@ ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "submissions_owner_select" ON submissions
   FOR SELECT USING (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 
 -- responses: no public INSERT, owner SELECT via chain
@@ -301,7 +301,7 @@ CREATE POLICY "responses_owner_select" ON responses
   FOR SELECT USING (
     submission_id IN (
       SELECT s.id FROM submissions s
-      WHERE s.form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+      WHERE s.form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
     )
   );
 
@@ -310,7 +310,7 @@ ALTER TABLE llm_conversations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "llm_conversations_owner_select" ON llm_conversations
   FOR SELECT USING (
-    form_id IN (SELECT id FROM forms WHERE user_id = auth.uid())
+    form_id IN (SELECT id FROM forms WHERE user_id = auth.jwt()->>'sub')
   );
 
 -- rate_limit_log: no public policies (service role only)

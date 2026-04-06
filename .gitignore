@@ -32,5 +32,10 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Playwright
+playwright-report/
+test-results/
+e2e/.auth/
+
 # Misc
 .cache/

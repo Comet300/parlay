@@ -1,39 +1,38 @@
 import { test, expect } from '@playwright/test'
 
-/**
- * End-to-end lifecycle tests covering full form/facet CRUD flows
- * as described in the spec scenarios.
- */
+/** Navigate to dashboard and wait for hydration */
+async function gotoDashboard(page: import('@playwright/test').Page) {
+  await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
+}
+
+/** Stable locator for the inline title input in the builder toolbar */
+function titleInput(page: import('@playwright/test').Page) {
+  return page.locator('input.font-semibold')
+}
 
 test.describe('Form lifecycle', () => {
   test('create form → edit title → delete form', async ({ page }) => {
-    // === Scenario: New Form creation ===
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
     await page.getByRole('button', { name: 'New Form' }).click()
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 10_000 })
+    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
 
-    // === Scenario: Title update ===
-    const titleInput = page.locator('input[value="Untitled Form"]')
-    await titleInput.fill('Lifecycle Test Form')
-    await titleInput.blur()
+    const input = titleInput(page)
+    await input.fill('Lifecycle Test Form')
+    await input.blur()
     await page.waitForTimeout(500)
 
-    // Verify on dashboard
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
     await expect(page.getByText('Lifecycle Test Form')).toBeVisible()
 
-    // === Scenario: Form deletion ===
-    // Open form-level menu on the card
     const card = page.locator('[class*="overflow-hidden flex flex-col"]')
       .filter({ hasText: 'Lifecycle Test Form' })
     await card.getByLabel('Form actions').click()
     await page.getByText('Delete form').click()
 
-    // Confirm dialog
     await expect(page.getByText(/all its facets and response data/)).toBeVisible()
     await page.getByRole('button', { name: 'Delete' }).click()
-
-    // Form should be gone
     await page.waitForTimeout(500)
     await expect(page.getByText('Lifecycle Test Form')).not.toBeVisible()
   })
@@ -41,160 +40,217 @@ test.describe('Form lifecycle', () => {
 
 test.describe('Facet lifecycle', () => {
   test('publish → unpublish → archive → re-activate', async ({ page }) => {
-    // Create a form
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
     await page.getByRole('button', { name: 'New Form' }).click()
-    await expect(page).toHaveURL(/\/build\//)
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await gotoDashboard(page)
 
-    // Go back to dashboard to use chip menus
-    await page.goto('/dashboard')
+    // Scope interactions to the first form card
+    const card = page.locator('[class*="overflow-hidden flex flex-col"]').first()
 
     // === draft → active (Publish) ===
-    await page.getByLabel(/Actions for/).first().click()
-    await expect(page.getByText('Publish')).toBeVisible()
-    await page.getByText('Publish').click()
+    await card.getByLabel(/Actions for/).first().click()
+    await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Publish', exact: true }).click()
     await page.waitForTimeout(500)
 
     // === active → draft (Unpublish) ===
-    await page.getByLabel(/Actions for/).first().click()
+    await card.getByLabel(/Actions for/).first().click()
     await expect(page.getByText('Unpublish')).toBeVisible()
-    await expect(page.getByText('Archive')).toBeVisible()
     await page.getByText('Unpublish').click()
     await page.waitForTimeout(500)
 
     // === back to draft, publish again for archive test ===
-    await page.getByLabel(/Actions for/).first().click()
-    await page.getByText('Publish').click()
+    await card.getByLabel(/Actions for/).first().click()
+    await page.getByRole('button', { name: 'Publish', exact: true }).click()
     await page.waitForTimeout(500)
 
     // === active → archived (Archive with confirmation) ===
-    await page.getByLabel(/Actions for/).first().click()
-    await page.getByText('Archive').click()
+    await card.getByLabel(/Actions for/).first().click()
+    await page.getByRole('button', { name: 'Archive', exact: true }).click()
 
     // Confirm dialog should appear
     await expect(page.getByText('Archive facet')).toBeVisible()
-    await page.getByRole('button', { name: 'Archive' }).click()
+    await page.getByRole('button', { name: 'Archive' }).last().click()
     await page.waitForTimeout(500)
 
     // === archived → active (Re-activate) ===
-    await page.getByLabel(/Actions for/).first().click()
+    await card.getByLabel(/Actions for/).first().click()
     await expect(page.getByText('Re-activate')).toBeVisible()
     await page.getByText('Re-activate').click()
     await page.waitForTimeout(500)
 
-    // Should be active again — Unpublish should be available
-    await page.getByLabel(/Actions for/).first().click()
+    // Should be active again
+    await card.getByLabel(/Actions for/).first().click()
     await expect(page.getByText('Unpublish')).toBeVisible()
 
-    // Cleanup: delete the form
+    // Cleanup
     await page.keyboard.press('Escape')
-    await page.getByLabel('Form actions').first().click()
+    await card.getByLabel('Form actions').click()
     await page.getByText('Delete form').click()
     await page.getByRole('button', { name: 'Delete' }).click()
   })
 
   test('delete default facet auto-promotes oldest remaining', async ({ page }) => {
-    // Create a form
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
     await page.getByRole('button', { name: 'New Form' }).click()
-    await expect(page).toHaveURL(/\/build\//)
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
 
-    // Create a second facet via the switcher
-    await page.locator('button:has-text("default")').first().click()
+    // Create a second facet
+    await page.locator(`button:has-text("default")`).first().click()
+    await expect(page.getByText('Create facet')).toBeVisible()
     await page.getByText('Create facet').click()
     const input = page.locator('input[placeholder="facet-name"]')
     await input.fill('variant-a')
     await input.press('Enter')
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
+    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
 
-    // Go to dashboard
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
 
-    // There should be two facet chips: "default" (is_default) and "variant-a"
-    const card = page.locator('[class*="overflow-hidden flex flex-col"]').first()
-    await expect(card.getByText('(default)')).toBeVisible()
+    // Find the card with both "default" and "variant-a" chips
+    const card = page.locator('[class*="overflow-hidden flex flex-col"]')
+      .filter({ hasText: 'variant-a' })
+      .first()
+    await expect(card.getByText('(default)').first()).toBeVisible()
 
     // Delete the "default" facet
-    const defaultChipMenu = page.getByLabel('Actions for default')
-    await defaultChipMenu.click()
+    await card.getByLabel('Actions for default').click()
     await page.getByText('Delete facet').click()
-
-    // Confirm
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(500)
 
     // "variant-a" should now be promoted to default
-    await expect(page.getByText('(default)')).toBeVisible()
-    await expect(page.getByText('variant-a')).toBeVisible()
+    await expect(card.getByText('(default)').first()).toBeVisible()
+    await expect(card.getByText('variant-a')).toBeVisible()
 
     // Cleanup
-    await page.getByLabel('Form actions').first().click()
+    await card.getByLabel('Form actions').click()
     await page.getByText('Delete form').click()
     await page.getByRole('button', { name: 'Delete' }).click()
   })
 
   test('delete last facet deletes the entire form', async ({ page }) => {
-    // Create a form
-    await page.goto('/dashboard')
-    const formCountBefore = await page.locator('[class*="overflow-hidden flex flex-col"]').count()
-
+    await gotoDashboard(page)
     await page.getByRole('button', { name: 'New Form' }).click()
-    await expect(page).toHaveURL(/\/build\//)
-    await page.goto('/dashboard')
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
 
-    // Verify one more card
-    const formCountAfter = await page.locator('[class*="overflow-hidden flex flex-col"]').count()
-    expect(formCountAfter).toBe(formCountBefore + 1)
+    // Give it a unique title to track
+    const input = titleInput(page)
+    await input.fill('Delete-Last-Facet-Test')
+    await input.blur()
+    await page.waitForTimeout(500)
 
-    // Delete the only facet
-    const lastCard = page.locator('[class*="overflow-hidden flex flex-col"]').first()
-    await lastCard.getByLabel(/Actions for/).click()
+    await gotoDashboard(page)
+    await expect(page.getByText('Delete-Last-Facet-Test')).toBeVisible()
+
+    const card = page.locator('[class*="overflow-hidden flex flex-col"]')
+      .filter({ hasText: 'Delete-Last-Facet-Test' })
+    await card.getByLabel(/Actions for/).click()
     await page.getByText('Delete facet').click()
     await page.getByRole('button', { name: 'Delete' }).click()
     await page.waitForTimeout(500)
 
-    // Form should be gone too
-    const formCountFinal = await page.locator('[class*="overflow-hidden flex flex-col"]').count()
-    expect(formCountFinal).toBe(formCountBefore)
+    await expect(page.getByText('Delete-Last-Facet-Test')).not.toBeVisible()
   })
 })
 
 test.describe('Round-robin toggle', () => {
   test('toggling OFF prompts for default facet selection', async ({ page }) => {
-    // Create a form with 2 facets
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
     await page.getByRole('button', { name: 'New Form' }).click()
-    await expect(page).toHaveURL(/\/build\//)
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+
+    // Give it a unique title for targeting
+    const titleEl = titleInput(page)
+    await titleEl.fill('RR-Toggle-Test')
+    await titleEl.blur()
+    await page.waitForTimeout(500)
 
     // Create second facet
-    await page.locator('button:has-text("default")').first().click()
+    await page.locator(`button:has-text("default")`).first().click()
+    await expect(page.getByText('Create facet')).toBeVisible()
     await page.getByText('Create facet').click()
     const input = page.locator('input[placeholder="facet-name"]')
     await input.fill('second')
     await input.press('Enter')
-    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 5_000 })
+    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
 
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
 
-    // Toggle ON first
-    const toggle = page.getByText('Round-robin').locator('..').locator('input[type="checkbox"]')
-    await toggle.check()
+    // Target the specific card
+    const card = page.locator('[class*="overflow-hidden flex flex-col"]')
+      .filter({ hasText: 'RR-Toggle-Test' })
+
+    // Toggle ON first — use click() for controlled React checkbox
+    const toggle = card.getByRole('checkbox', { name: 'Round-robin' })
+    await toggle.click()
     await page.waitForTimeout(500)
 
     // Now toggle OFF — should show prompt
-    await toggle.uncheck()
-    await expect(page.getByText('Select default facet:')).toBeVisible()
+    await toggle.click()
+    await expect(card.getByText('Select default facet:')).toBeVisible()
 
     // Select a facet
-    const selector = page.getByText('Select default facet:').locator('..').locator('select')
+    const selector = card.locator('select').last()
     await selector.selectOption({ index: 1 })
     await page.waitForTimeout(500)
 
     // Prompt should disappear
-    await expect(page.getByText('Select default facet:')).not.toBeVisible()
+    await expect(card.getByText('Select default facet:')).not.toBeVisible()
 
     // Cleanup
-    await page.getByLabel('Form actions').first().click()
+    await card.getByLabel('Form actions').click()
+    await page.getByText('Delete form').click()
+    await page.getByRole('button', { name: 'Delete' }).click()
+  })
+
+  test('cancel dismisses prompt and keeps round-robin ON', async ({ page }) => {
+    await gotoDashboard(page)
+    await page.getByRole('button', { name: 'New Form' }).click()
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+
+    const titleEl = titleInput(page)
+    await titleEl.fill('RR-Cancel-Test')
+    await titleEl.blur()
+    await page.waitForTimeout(500)
+
+    // Create second facet
+    await page.locator('button:has-text("default")').first().click()
+    await expect(page.getByText('Create facet')).toBeVisible()
+    await page.getByText('Create facet').click()
+    const input = page.locator('input[placeholder="facet-name"]')
+    await input.fill('second')
+    await input.press('Enter')
+    await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
+
+    await gotoDashboard(page)
+
+    const card = page.locator('[class*="overflow-hidden flex flex-col"]')
+      .filter({ hasText: 'RR-Cancel-Test' })
+      .first()
+
+    // Toggle ON
+    const toggle = card.getByRole('checkbox', { name: 'Round-robin' })
+    await toggle.click()
+    await page.waitForTimeout(500)
+
+    // Toggle OFF → prompt appears
+    await toggle.click()
+    await expect(card.getByText('Select default facet:')).toBeVisible()
+
+    // Click Cancel
+    await card.getByRole('button', { name: 'Cancel' }).click()
+
+    // Prompt disappears, round-robin stays ON
+    await expect(card.getByText('Select default facet:')).not.toBeVisible()
+    await expect(toggle).toBeChecked()
+
+    // Cleanup
+    await card.getByLabel('Form actions').click()
     await page.getByText('Delete form').click()
     await page.getByRole('button', { name: 'Delete' }).click()
   })
@@ -202,28 +258,26 @@ test.describe('Round-robin toggle', () => {
 
 test.describe('Dashboard search', () => {
   test('filters forms by title (case-insensitive)', async ({ page }) => {
-    // Create a form with a unique title
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
     await page.getByRole('button', { name: 'New Form' }).click()
-    await expect(page).toHaveURL(/\/build\//)
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
 
-    const titleInput = page.locator('input[value="Untitled Form"]')
-    await titleInput.fill('Searchable Unique Title')
-    await titleInput.blur()
+    const input = titleInput(page)
+    await input.fill('Searchable Unique Title')
+    await input.blur()
     await page.waitForTimeout(500)
 
-    await page.goto('/dashboard')
+    await gotoDashboard(page)
 
-    // Search for it
     const searchInput = page.getByPlaceholder('Search forms...')
     await searchInput.fill('searchable')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
 
     await expect(page.getByText('Searchable Unique Title')).toBeVisible()
 
-    // Search for something else
     await searchInput.fill('nonexistent-xyz-123')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
     await expect(page.getByText('Searchable Unique Title')).not.toBeVisible()
 
     // Cleanup

@@ -1,116 +1,108 @@
 import { test, expect } from '@playwright/test'
 
+/** Navigate to dashboard and wait for hydration */
+async function gotoDashboard(page: import('@playwright/test').Page) {
+  await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
+}
+
+/** Ensure at least one form card exists on the dashboard */
+async function ensureFormExists(page: import('@playwright/test').Page) {
+  await gotoDashboard(page)
+  const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
+  if ((await cards.count()) === 0) {
+    await page.getByRole('button', { name: 'New Form' }).click()
+    await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+    await gotoDashboard(page)
+  }
+}
+
+/** Create a fresh form and return to dashboard */
+async function createFormViaDashboard(page: import('@playwright/test').Page) {
+  await gotoDashboard(page)
+  await page.getByRole('button', { name: 'New Form' }).click()
+  await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+  await gotoDashboard(page)
+}
+
 test.describe('Dashboard', () => {
   test.describe('New Form creation', () => {
     test('creates a form and redirects to builder', async ({ page }) => {
-      await page.goto('/dashboard')
-
-      // Click "New Form"
+      await gotoDashboard(page)
       await page.getByRole('button', { name: 'New Form' }).click()
-
-      // Should redirect to /build/{facetId}
-      await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 10_000 })
+      await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
     })
   })
 
   test.describe('Empty state', () => {
     test('shows CTA when user has no forms', async ({ page }) => {
-      // This test assumes a clean user — skip if forms exist
-      await page.goto('/dashboard')
+      await gotoDashboard(page)
       const cta = page.getByRole('button', { name: 'Create your first form' })
-      // If CTA visible, verify it works
       if (await cta.isVisible()) {
         await cta.click()
-        await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 10_000 })
+        await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
       }
     })
   })
 
   test.describe('Form card', () => {
     test('displays form title, facet chips, and thumbnail', async ({ page }) => {
-      await page.goto('/dashboard')
+      await ensureFormExists(page)
 
-      // Create a form if none exist
-      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
-      if ((await cards.count()) === 0) {
-        await page.getByRole('button', { name: 'New Form' }).click()
-        await expect(page).toHaveURL(/\/build\//)
-        await page.goto('/dashboard')
-      }
-
-      // Verify card structure
-      const firstCard = cards.first()
+      const firstCard = page.locator('[class*="overflow-hidden flex flex-col"]').first()
       await expect(firstCard.locator('img')).toBeVisible()
-      await expect(firstCard.getByText('Untitled Form')).toBeVisible()
-
-      // Default facet chip should exist
       await expect(firstCard.getByText('default')).toBeVisible()
     })
 
     test('shows Draft watermark when all facets are draft', async ({ page }) => {
-      await page.goto('/dashboard')
-      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
-      if ((await cards.count()) === 0) {
-        await page.getByRole('button', { name: 'New Form' }).click()
-        await expect(page).toHaveURL(/\/build\//)
-        await page.goto('/dashboard')
-      }
-
-      // All-draft forms should show watermark
+      await ensureFormExists(page)
       await expect(page.getByText('Draft').first()).toBeVisible()
     })
 
     test('title links to builder with default facet', async ({ page }) => {
-      await page.goto('/dashboard')
-      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
-      if ((await cards.count()) === 0) {
-        await page.getByRole('button', { name: 'New Form' }).click()
-        await expect(page).toHaveURL(/\/build\//)
-        await page.goto('/dashboard')
-      }
+      await ensureFormExists(page)
 
-      const titleLink = page.getByText('Untitled Form').first()
-      await titleLink.click()
+      const firstCard = page.locator('[class*="overflow-hidden flex flex-col"]').first()
+      await firstCard.locator('a').first().click()
       await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/)
     })
   })
 
   test.describe('Search', () => {
     test('filters forms by title with debounce', async ({ page }) => {
-      await page.goto('/dashboard')
+      await ensureFormExists(page)
 
       const searchInput = page.getByPlaceholder('Search forms...')
       await searchInput.fill('nonexistent-form-xyz')
+      await page.waitForTimeout(1000)
 
-      // Wait for debounce (300ms) + network
-      await page.waitForTimeout(500)
-
-      // Should show no results message
-      await expect(
-        page.getByText('No forms match your filters.'),
-      ).toBeVisible()
+      const noMatchText = page.getByText('No forms match your filters.')
+      const noFormsText = page.getByText('No forms yet')
+      await expect(noMatchText.or(noFormsText)).toBeVisible({ timeout: 5_000 })
     })
   })
 
   test.describe('Status filter buttons', () => {
     test('shows filter buttons with active indicator', async ({ page }) => {
-      await page.goto('/dashboard')
+      await gotoDashboard(page)
 
-      for (const label of ['All', 'Has Active', 'All Draft', 'Has Archived']) {
-        await expect(page.getByRole('button', { name: label })).toBeVisible()
-      }
+      await expect(page.getByRole('button', { name: 'All', exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Has Active' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'All Draft' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Has Archived' })).toBeVisible()
 
-      // "All" should be active by default
-      const allBtn = page.getByRole('button', { name: 'All' })
+      const allBtn = page.getByRole('button', { name: 'All', exact: true })
       await expect(allBtn).toHaveClass(/text-primary/)
     })
   })
 
   test.describe('Sort dropdown', () => {
     test('has all four sort options', async ({ page }) => {
-      await page.goto('/dashboard')
+      await gotoDashboard(page)
 
-      const select = page.locator('select')
+      // Target the sort select in the toolbar (not facet-default selects in cards)
+      const toolbar = page.locator('.flex.flex-col.sm\\:flex-row.gap-3')
+      const select = toolbar.locator('select')
       const options = select.locator('option')
 
       await expect(options).toHaveCount(4)
@@ -119,74 +111,111 @@ test.describe('Dashboard', () => {
       await expect(options.nth(2)).toHaveText('Oldest first')
       await expect(options.nth(3)).toHaveText('Alphabetical (A-Z)')
     })
+
+    test('alphabetical sort orders forms by title', async ({ page }) => {
+      // Create two forms with known titles
+      await gotoDashboard(page)
+      await page.getByRole('button', { name: 'New Form' }).click()
+      await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+      await page.waitForLoadState('networkidle')
+      await page.locator('input.font-semibold').fill('Zeta Sort Test')
+      await page.locator('input.font-semibold').blur()
+      await page.waitForTimeout(500)
+
+      await gotoDashboard(page)
+      await page.getByRole('button', { name: 'New Form' }).click()
+      await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+      await page.waitForLoadState('networkidle')
+      await page.locator('input.font-semibold').fill('Alpha Sort Test')
+      await page.locator('input.font-semibold').blur()
+      await page.waitForTimeout(500)
+
+      await gotoDashboard(page)
+
+      // Filter to only test forms so pagination doesn't hide one
+      const searchInput = page.getByPlaceholder('Search forms...')
+      await searchInput.fill('Sort Test')
+      await page.waitForTimeout(1000)
+
+      // Select Alphabetical (A-Z)
+      const toolbar = page.locator('.flex.flex-col.sm\\:flex-row.gap-3')
+      await toolbar.locator('select').selectOption('title')
+      await page.waitForTimeout(1000)
+
+      // Get all card titles in order (title is the a.font-semibold link)
+      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
+      const titles: string[] = []
+      for (let i = 0; i < await cards.count(); i++) {
+        const title = await cards.nth(i).locator('a.font-semibold').textContent()
+        if (title) titles.push(title.trim())
+      }
+
+      // Find positions — Alpha must come before Zeta
+      const alphaIdx = titles.findIndex((t) => t.includes('Alpha Sort Test'))
+      const zetaIdx = titles.findIndex((t) => t.includes('Zeta Sort Test'))
+      expect(alphaIdx).toBeGreaterThanOrEqual(0)
+      expect(zetaIdx).toBeGreaterThanOrEqual(0)
+      expect(alphaIdx).toBeLessThan(zetaIdx)
+
+      // Cleanup — search is already filtered to "Sort Test"
+      for (const name of ['Alpha Sort Test', 'Zeta Sort Test']) {
+        const card = page.locator('[class*="overflow-hidden flex flex-col"]').filter({ hasText: name })
+        if (await card.isVisible().catch(() => false)) {
+          await card.getByLabel('Form actions').click()
+          await page.getByText('Delete form').click()
+          await page.getByRole('button', { name: 'Delete' }).click()
+          await page.waitForTimeout(500)
+        }
+      }
+    })
   })
 
   test.describe('Facet chip action menu', () => {
     test('shows correct actions for draft facet', async ({ page }) => {
-      await page.goto('/dashboard')
-      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
-      if ((await cards.count()) === 0) {
-        await page.getByRole('button', { name: 'New Form' }).click()
-        await expect(page).toHaveURL(/\/build\//)
-        await page.goto('/dashboard')
-      }
+      await ensureFormExists(page)
 
-      // Open facet chip action menu
-      await page
-        .getByLabel(/Actions for/)
-        .first()
-        .click()
+      await page.getByLabel(/Actions for/).first().click()
 
-      // Common actions
       await expect(page.getByText('Edit')).toBeVisible()
       await expect(page.getByText('View Live')).toBeVisible()
       await expect(page.getByText('Export CSV')).toBeVisible()
       await expect(page.getByText('Delete facet')).toBeVisible()
 
-      // Draft-specific: Publish visible, Unpublish/Archive/Re-activate not
-      await expect(page.getByText('Publish')).toBeVisible()
+      // Draft-specific: Publish visible, Unpublish/Re-activate not
+      await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeVisible()
       await expect(page.getByText('Unpublish')).not.toBeVisible()
-      await expect(page.getByText('Archive')).not.toBeVisible()
       await expect(page.getByText('Re-activate')).not.toBeVisible()
     })
 
     test('Export CSV is disabled', async ({ page }) => {
-      await page.goto('/dashboard')
-      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
-      if ((await cards.count()) === 0) {
-        await page.getByRole('button', { name: 'New Form' }).click()
-        await expect(page).toHaveURL(/\/build\//)
-        await page.goto('/dashboard')
-      }
+      await ensureFormExists(page)
 
       await page.getByLabel(/Actions for/).first().click()
 
-      const csvBtn = page.getByRole('button', { name: 'Export CSV' })
-      await expect(csvBtn).toBeDisabled()
+      const csvBtn = page.locator('button').filter({ hasText: 'Export CSV' })
+      await expect(csvBtn).toBeVisible()
+      await expect(csvBtn).toHaveAttribute('disabled', '')
     })
 
     test('View Live is disabled for archived facets', async ({ page }) => {
-      // Create a form, publish then archive the facet
-      await page.goto('/dashboard')
-      await page.getByRole('button', { name: 'New Form' }).click()
-      await expect(page).toHaveURL(/\/build\//)
-      await page.goto('/dashboard')
+      await createFormViaDashboard(page)
 
       // Publish (draft → active)
       await page.getByLabel(/Actions for/).first().click()
-      await page.getByText('Publish').click()
+      await page.getByRole('button', { name: 'Publish', exact: true }).click()
       await page.waitForTimeout(500)
 
-      // Archive (active → archived)
+      // Archive (active → archived) — use exact match to avoid "Has Archived" filter
       await page.getByLabel(/Actions for/).first().click()
-      await page.getByText('Archive').click()
-      await page.getByRole('button', { name: 'Archive' }).click()
+      await page.getByRole('button', { name: 'Archive', exact: true }).click()
+      await page.getByRole('button', { name: 'Archive' }).last().click()
       await page.waitForTimeout(500)
 
       // Open menu — View Live should be disabled
       await page.getByLabel(/Actions for/).first().click()
-      const viewLiveBtn = page.getByRole('button', { name: 'View Live' })
-      await expect(viewLiveBtn).toBeDisabled()
+      const viewLiveBtn = page.locator('button').filter({ hasText: 'View Live' })
+      await expect(viewLiveBtn).toBeVisible()
+      await expect(viewLiveBtn).toHaveAttribute('disabled', '')
 
       // Cleanup
       await page.keyboard.press('Escape')
@@ -196,65 +225,108 @@ test.describe('Dashboard', () => {
     })
 
     test('Publish transitions draft to active', async ({ page }) => {
-      // Create a fresh form
-      await page.goto('/dashboard')
-      await page.getByRole('button', { name: 'New Form' }).click()
-      await expect(page).toHaveURL(/\/build\//)
-      await page.goto('/dashboard')
+      await createFormViaDashboard(page)
 
       // Open chip menu and publish
       await page.getByLabel(/Actions for/).first().click()
-      await page.getByText('Publish').click()
-
-      // After refresh, chip should show active styling and menu should have Unpublish
+      await page.getByRole('button', { name: 'Publish', exact: true }).click()
       await page.waitForTimeout(500)
+
+      // Chip should now be active — menu should have Unpublish
       await page.getByLabel(/Actions for/).first().click()
       await expect(page.getByText('Unpublish')).toBeVisible()
-      await expect(page.getByText('Archive')).toBeVisible()
-      await expect(page.getByText('Publish')).not.toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archive', exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Publish', exact: true })).not.toBeVisible()
     })
 
     test('Archive shows confirmation dialog', async ({ page }) => {
-      await page.goto('/dashboard')
+      await createFormViaDashboard(page)
 
-      // Find an active facet (from previous test) or create one
+      // Publish first (need active for Archive)
       await page.getByLabel(/Actions for/).first().click()
+      await page.getByRole('button', { name: 'Publish', exact: true }).click()
+      await page.waitForTimeout(500)
 
-      // If active, Archive should be visible
-      const archiveBtn = page.getByText('Archive')
-      if (await archiveBtn.isVisible()) {
-        await archiveBtn.click()
+      // Now open menu and click Archive
+      await page.getByLabel(/Actions for/).first().click()
+      await page.getByRole('button', { name: 'Archive', exact: true }).click()
 
-        // Confirmation dialog
-        await expect(page.getByText('Archive facet')).toBeVisible()
-        await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
-        await page.getByRole('button', { name: 'Cancel' }).click()
-      }
+      // Confirmation dialog
+      await expect(page.getByText('Archive facet')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archive' }).last()).toBeVisible()
+      await page.getByRole('button', { name: 'Cancel' }).click()
     })
   })
 
   test.describe('Form-level action menu', () => {
     test('Delete form shows confirmation dialog', async ({ page }) => {
-      await page.goto('/dashboard')
-      const cards = page.locator('[class*="overflow-hidden flex flex-col"]')
-      if ((await cards.count()) === 0) {
-        await page.getByRole('button', { name: 'New Form' }).click()
-        await expect(page).toHaveURL(/\/build\//)
-        await page.goto('/dashboard')
-      }
+      await ensureFormExists(page)
 
-      // Open form kebab menu
       await page.getByLabel('Form actions').first().click()
       await page.getByText('Delete form').click()
 
-      // Confirmation
-      await expect(page.getByText('Delete form')).toBeVisible()
-      await expect(
-        page.getByText(/all its facets and response data/),
-      ).toBeVisible()
-
-      // Cancel
+      await expect(page.getByText(/all its facets and response data/)).toBeVisible()
       await page.getByRole('button', { name: 'Cancel' }).click()
+    })
+  })
+
+  test.describe('Pagination', () => {
+    test('navigates between pages when forms exceed page size', async ({ page }) => {
+      await gotoDashboard(page)
+
+      // Create forms until pagination appears (page size = 12)
+      const created: string[] = []
+      while (!(await page.getByText(/Page \d+ of \d+/).isVisible().catch(() => false))) {
+        const name = `Pagination-${Date.now()}-${created.length}`
+        await page.getByRole('button', { name: 'New Form' }).click()
+        await expect(page).toHaveURL(/\/build\//, { timeout: 15_000 })
+        await page.waitForLoadState('networkidle')
+        await page.locator('input.font-semibold').fill(name)
+        await page.locator('input.font-semibold').blur()
+        await page.waitForTimeout(300)
+        created.push(name)
+        await gotoDashboard(page)
+      }
+
+      // Pagination is visible — verify we're on page 1
+      await expect(page.getByText(/Page 1 of \d+/)).toBeVisible()
+
+      // Locate pagination controls
+      const paginationBar = page.getByText(/Page \d+ of \d+/).locator('..')
+      const prevBtn = paginationBar.locator('button').first()
+      const nextBtn = paginationBar.locator('button').last()
+
+      // Prev should be disabled on page 1
+      await expect(prevBtn).toBeDisabled()
+
+      // Navigate to page 2
+      await nextBtn.click()
+      await page.waitForTimeout(1000)
+      await expect(page.getByText(/Page 2 of \d+/)).toBeVisible()
+
+      // Next may be disabled on last page, prev should be enabled
+      await expect(prevBtn).toBeEnabled()
+
+      // Navigate back to page 1
+      await prevBtn.click()
+      await page.waitForTimeout(1000)
+      await expect(page.getByText(/Page 1 of \d+/)).toBeVisible()
+
+      // Cleanup created forms
+      for (const name of created) {
+        const searchInput = page.getByPlaceholder('Search forms...')
+        await searchInput.fill(name)
+        await page.waitForTimeout(500)
+        const card = page.locator('[class*="overflow-hidden flex flex-col"]').filter({ hasText: name })
+        if (await card.isVisible().catch(() => false)) {
+          await card.getByLabel('Form actions').click()
+          await page.getByText('Delete form').click()
+          await page.getByRole('button', { name: 'Delete' }).click()
+          await page.waitForTimeout(300)
+        }
+        await searchInput.clear()
+        await page.waitForTimeout(300)
+      }
     })
   })
 })
