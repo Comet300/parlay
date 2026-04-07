@@ -17,7 +17,11 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     tanstackStart(),
-    viteReact(),
+    viteReact({
+      babel: {
+        plugins: ['babel-plugin-react-compiler'],
+      },
+    }),
     nitro({ preset: 'vercel' }),
   ],
 })

@@ -12,7 +12,7 @@ export function useAutoSave(
   const initializeFromServer = useBuilderStore((s) => s.initializeFromServer)
   const isDirty = useBuilderStore((s) => s.isDirty)
   const storeFacetId = useBuilderStore((s) => s.facetId)
-  const flowDefinition = useBuilderStore((s) => s.flowDefinition)
+  const getFlowDefinition = useBuilderStore((s) => s.getFlowDefinition)
   const colorScheme = useBuilderStore((s) => s.colorScheme)
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const initializedRef = useRef<string | null>(null)
@@ -32,11 +32,13 @@ export function useAutoSave(
     clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(async () => {
       try {
+        const flowDefinition = useBuilderStore.getState().getFlowDefinition()
+        const currentColorScheme = useBuilderStore.getState().colorScheme
         await saveFacetData({
           data: {
             facetId,
             flowDefinition: flowDefinition ?? undefined,
-            colorScheme: colorScheme ?? undefined,
+            colorScheme: currentColorScheme ?? undefined,
           },
         })
         useBuilderStore.getState().markClean()
@@ -46,5 +48,5 @@ export function useAutoSave(
     }, AUTO_SAVE_DELAY)
 
     return () => clearTimeout(timeoutRef.current)
-  }, [facetId, isDirty, flowDefinition, colorScheme, storeFacetId])
+  }, [facetId, isDirty, storeFacetId, getFlowDefinition, colorScheme])
 }

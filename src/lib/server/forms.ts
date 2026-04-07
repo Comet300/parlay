@@ -4,22 +4,41 @@ import { auth } from '~/lib/auth/server'
 import { createAuthenticatedSupabaseClient } from '~/lib/supabase/authenticated-client'
 import { supabaseAdmin } from '~/lib/supabase/server'
 
+const DEFAULT_START_CONTENT = `# Welcome
+
+Thank you for taking the time to participate.
+
+Tap **Continue** below to get started.`
+
+const DEFAULT_END_CONTENT = `# Thank you!
+
+Your responses have been recorded. You may now close this page.`
+
 const DEFAULT_FLOW_DEFINITION = {
   nodes: [
     {
       id: 'start',
       type: 'start',
       position: { x: 0, y: 200 },
-      data: { label: 'Start' },
+      data: { type: 'start', label: 'Start', markdownContent: DEFAULT_START_CONTENT },
+      deletable: false,
     },
     {
       id: 'end',
       type: 'end',
       position: { x: 600, y: 200 },
-      data: { label: 'End' },
+      data: { type: 'end', label: 'End', markdownContent: DEFAULT_END_CONTENT },
+      deletable: false,
     },
   ],
-  edges: [],
+  edges: [
+    {
+      id: 'start->end',
+      source: 'start',
+      target: 'end',
+      type: 'default',
+    },
+  ],
   viewport: { x: 0, y: 0, zoom: 1 },
 }
 

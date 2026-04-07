@@ -244,7 +244,7 @@ export const updateFacetStatus = createServerFn({ method: 'POST' })
 
     const { data: facet, error: facetError } = await supabase
       .from('facets')
-      .select('status')
+      .select('status, flow_definition, form_id')
       .eq('id', data.facetId)
       .single()
 
@@ -255,6 +255,15 @@ export const updateFacetStatus = createServerFn({ method: 'POST' })
       throw new Error(`Cannot transition from ${facet.status} to ${data.newStatus}`)
     }
 
+    // Publish validation: draft → active
+    if (facet.status === 'draft' && data.newStatus === 'active') {
+      const errors = await validateForPublish(facet.flow_definition, facet.form_id, supabase)
+      if (errors.length > 0) {
+        const structured = { type: 'publish_validation', errors }
+        throw new Error(JSON.stringify(structured))
+      }
+    }
+
     const { error } = await supabase
       .from('facets')
       .update({ status: data.newStatus })
@@ -262,6 +271,94 @@ export const updateFacetStatus = createServerFn({ method: 'POST' })
 
     if (error) throw new Error(error.message)
   })
+
+async function validateForPublish(
+  flowDef: unknown,
+  formId: string,
+  supabase: ReturnType<typeof createAuthenticatedSupabaseClient>,
+): Promise<string[]> {
+  const errors: string[] = []
+
+  if (!flowDef || typeof flowDef !== 'object') {
+    errors.push('No flow definition found')
+    return errors
+  }
+
+  const fd = flowDef as { nodes?: unknown[]; edges?: unknown[] }
+  const nodes = (fd.nodes ?? []) as Array<{
+    id: string
+    data: { type: string; slug?: string; buttons?: { id: string }[]; provider?: string; label?: string }
+  }>
+  const edges = (fd.edges ?? []) as Array<{ source: string; sourceHandle?: string }>
+
+  const pageTierTypes = new Set(['start', 'page', 'page_group', 'scripted_llm', 'real_llm'])
+
+  // Dead path check
+  const outgoing = new Map<string, Set<string | undefined>>()
+  for (const edge of edges) {
+    if (!outgoing.has(edge.source)) outgoing.set(edge.source, new Set())
+    outgoing.get(edge.source)!.add(edge.sourceHandle)
+  }
+
+  for (const node of nodes) {
+    if (pageTierTypes.has(node.data.type) && node.data.type !== 'end') {
+      if (!outgoing.has(node.id)) {
+        errors.push(`Node "${node.data.label ?? node.id}" has no outgoing edge`)
+      }
+    }
+    if (node.data.type === 'card' && node.data.buttons) {
+      for (const btn of node.data.buttons) {
+        const handles = outgoing.get(node.id)
+        if (!handles || !handles.has(`button-${btn.id}`)) {
+          errors.push(`Card "${node.data.label ?? node.id}" has a button with no outgoing edge`)
+        }
+      }
+    }
+  }
+
+  // Slug uniqueness check
+  const slugMap = new Map<string, string[]>()
+  for (const node of nodes) {
+    if (node.data.slug) {
+      if (!slugMap.has(node.data.slug)) slugMap.set(node.data.slug, [])
+      slugMap.get(node.data.slug)!.push(node.id)
+    }
+  }
+  slugMap.forEach((nodeIds, slug) => {
+    if (nodeIds.length > 1) errors.push(`Duplicate slug "${slug}"`)
+  })
+
+  // LLM provider check
+  const llmNodes = nodes.filter((n) => n.data.type === 'real_llm' && n.data.provider)
+  if (llmNodes.length > 0) {
+    const { data: form } = await supabase
+      .from('forms')
+      .select('user_id')
+      .eq('id', formId)
+      .single()
+
+    if (form?.user_id) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('litellm_api_keys')
+        .eq('id', form.user_id)
+        .single()
+
+      const keys = profile?.litellm_api_keys as Record<string, string> | null
+      const providers = keys ? Object.keys(keys) : []
+
+      for (const node of llmNodes) {
+        if (!providers.includes(node.data.provider!)) {
+          errors.push(
+            `LLM node "${node.data.label ?? node.id}" references unconfigured provider "${node.data.provider}"`,
+          )
+        }
+      }
+    }
+  }
+
+  return errors
+}
 
 export const setDefaultFacet = createServerFn({ method: 'POST' })
   .inputValidator((data: { formId: string; facetId: string }) => data)

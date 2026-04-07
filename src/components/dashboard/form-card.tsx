@@ -208,7 +208,6 @@ export function FormCard({
   const formMenuRef = useRef<HTMLDivElement>(null)
 
   const defaultFacet = form.facets.find((f) => f.is_default) ?? form.facets[0]
-  const allDraft = form.facets.every((f) => f.status === 'draft')
   const allArchived = form.facets.every((f) => f.status === 'archived')
   const hasActive = form.facets.some((f) => f.status === 'active')
 

@@ -16,8 +16,10 @@ function stripSensitiveFields(flowDefinition: any): Record<string, any> {
     ...flowDefinition,
     nodes: flowDefinition.nodes.map((node: any) => {
       if (node.type !== 'real_llm') return node
-      const { setup_prompt, ending_condition, ...rest } = node.data ?? {}
-      return { ...node, data: rest }
+      const data = { ...(node.data ?? {}) }
+      delete data.setup_prompt
+      delete data.ending_condition
+      return { ...node, data }
     }),
   }
 }
