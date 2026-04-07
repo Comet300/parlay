@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { ChevronDown, Plus, Star, Pencil, Check, X } from 'lucide-react'
+import { ChevronDown, Plus, Pencil, Check, X, Shuffle } from 'lucide-react'
 import { createFacet, renameFacet, setDefaultFacet } from '~/lib/server/facets'
+import { updateFormRoundRobin } from '~/lib/server/forms'
 
 const NICKNAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -32,6 +33,9 @@ export function FacetSwitcher({
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameError, setRenameError] = useState('')
+  const [togglingOff, setTogglingOff] = useState(false)
+  const [selectedDefaultId, setSelectedDefaultId] = useState<string | null>(null)
+  const [toggleBusy, setToggleBusy] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const createInputRef = useRef<HTMLInputElement>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
@@ -105,6 +109,53 @@ export function FacetSwitcher({
     onRefresh()
   }
 
+  const activeSiblings = siblings.filter((s) => s.status === 'active')
+
+  async function handleRoundRobinToggle() {
+    if (roundRobinEnabled) {
+      // Toggling OFF
+      if (activeSiblings.length <= 1) {
+        // Auto-select the single (or no) active facet as default
+        setToggleBusy(true)
+        try {
+          if (activeSiblings.length === 1) {
+            await setDefaultFacet({ data: { formId, facetId: activeSiblings[0].id } })
+          }
+          await updateFormRoundRobin({ data: { formId, enabled: false } })
+          onRefresh()
+        } finally {
+          setToggleBusy(false)
+        }
+      } else {
+        // Multiple active facets — prompt for default selection
+        setTogglingOff(true)
+        setSelectedDefaultId(null)
+      }
+    } else {
+      // Toggling ON — commit immediately
+      setToggleBusy(true)
+      try {
+        await updateFormRoundRobin({ data: { formId, enabled: true } })
+        onRefresh()
+      } finally {
+        setToggleBusy(false)
+      }
+    }
+  }
+
+  async function handleConfirmToggleOff() {
+    if (!selectedDefaultId) return
+    setToggleBusy(true)
+    try {
+      await setDefaultFacet({ data: { formId, facetId: selectedDefaultId } })
+      await updateFormRoundRobin({ data: { formId, enabled: false } })
+      setTogglingOff(false)
+      onRefresh()
+    } finally {
+      setToggleBusy(false)
+    }
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -173,24 +224,78 @@ export function FacetSwitcher({
                     >
                       <Pencil className="h-3 w-3 text-text-muted" />
                     </button>
-                    {!roundRobinEnabled && !sibling.isDefault && (
-                      <button
-                        onClick={() => handleSetDefault(sibling.id)}
-                        className="p-1 rounded hover:bg-black/5"
-                        title="Set as default"
-                      >
-                        <Star className="h-3 w-3 text-text-muted" />
-                      </button>
-                    )}
                   </div>
                 </div>
               )}
             </div>
           ))}
 
+          {/* Round-robin toggle */}
+          <div className="border-t border-border mt-1 pt-1 px-3 py-1.5">
+            <button
+              onClick={handleRoundRobinToggle}
+              disabled={toggleBusy}
+              className="flex items-center gap-2 text-sm w-full hover:bg-light rounded px-1 py-0.5"
+            >
+              <Shuffle className="h-3.5 w-3.5 text-text-muted shrink-0" />
+              <span className="flex-1 text-left">Round-robin</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                roundRobinEnabled
+                  ? 'bg-primary/10 text-primary'
+                  : 'bg-gray-100 text-text-muted'
+              }`}>
+                {roundRobinEnabled ? 'ON' : 'OFF'}
+              </span>
+            </button>
+            {togglingOff && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-text-muted">Select default facet:</p>
+                <select
+                  value={selectedDefaultId ?? ''}
+                  onChange={(e) => setSelectedDefaultId(e.target.value || null)}
+                  className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                >
+                  <option value="">Choose...</option>
+                  {activeSiblings.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nickname}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleConfirmToggleOff}
+                    disabled={!selectedDefaultId || toggleBusy}
+                    className="text-xs px-2 py-1 rounded bg-primary text-white hover:bg-accent disabled:opacity-50"
+                  >
+                    {toggleBusy ? 'Saving...' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={() => setTogglingOff(false)}
+                    className="text-xs px-2 py-1 rounded text-text-muted hover:bg-light"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {!roundRobinEnabled && !togglingOff && siblings.length > 1 && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-text-muted shrink-0">Default:</span>
+                <select
+                  value={siblings.find((s) => s.isDefault)?.id ?? ''}
+                  onChange={(e) => handleSetDefault(e.target.value)}
+                  className="flex-1 min-w-0 text-xs border border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                >
+                  {siblings.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nickname}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <div className="border-t border-border mt-1 pt-1">
             {creating ? (
-              <div className="px-3 py-1.5">
+              <div className="px-3 py-1.5 overflow-hidden">
                 <div className="flex items-center gap-1">
                   <input
                     ref={createInputRef}
@@ -201,12 +306,12 @@ export function FacetSwitcher({
                       if (e.key === 'Escape') { setCreating(false); setCreateError('') }
                     }}
                     placeholder="facet-name"
-                    className="flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    className="min-w-0 flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/50"
                   />
-                  <button onClick={handleCreate} className="p-1 text-primary hover:text-accent">
+                  <button onClick={handleCreate} className="shrink-0 p-1 text-primary hover:text-accent">
                     <Check className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={() => { setCreating(false); setCreateError('') }} className="p-1 text-text-muted hover:text-text">
+                  <button onClick={() => { setCreating(false); setCreateError('') }} className="shrink-0 p-1 text-text-muted hover:text-text">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>

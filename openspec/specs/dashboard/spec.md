@@ -11,11 +11,20 @@ The system SHALL render one card per form in a responsive grid layout.
 Each card SHALL display:
 - Static thumbnail image from public/thumbnail-placeholder.svg
 - Form title (clickable, navigates to /build/{defaultFacetId})
-- Facet chips (one per facet) colored by status:
+- Form status badge next to the title:
+    - "Active" (primary pink) if any facet is active
+    - "Draft" (muted gray) if all facets are draft
+    - "Archived" (muted gray) if all facets are archived
+- Facet chips (one per facet, only when >1 facet) colored by status:
     draft = muted gray, active = primary pink, archived = dimmed
+    Chips display nickname and "(default)" label when round_robin_enabled = false.
+    Each chip SHALL include a kebab menu with per-facet actions:
+    Edit (navigate to builder), View Live (disabled unless active),
+    Export CSV (disabled), Publish (draft only), Unpublish (active only),
+    Re-activate (archived only), and Delete facet (with confirmation).
+    Archiving is only available at the form level, not per-facet.
 - Default facet selector dropdown (when round_robin_enabled = false AND >1 facet)
 - Round-robin toggle (when the form has >1 facet)
-- Action menu per facet chip
 
 ### Requirement: Pagination
 The system SHALL paginate the form card grid with a configurable page size
@@ -29,50 +38,30 @@ and update the grid without a full page reload.
 
 ### Requirement: Filtering
 The system SHALL provide filter controls above the grid:
-- Status filter: All, Has Active, All Draft, Has Archived
+- Status filter: All, Active, Draft, Archived
   (filters based on whether the form contains facets matching the status)
 The active filter SHALL be visually indicated.
 
 ### Requirement: Sorting
 The system SHALL provide a sort dropdown above the grid with options:
-- Last updated (default) — by forms.updated_at DESC
-- Newest first — by forms.created_at DESC
+- Newest first (default) — by forms.created_at DESC
 - Oldest first — by forms.created_at ASC
+- Last updated — by forms.updated_at DESC
 - Alphabetical (A-Z) — by forms.title ASC
 
 ### Requirement: Draft card styling
 Draft facet chips SHALL render at reduced opacity.
-Form cards where ALL facets are draft SHALL show a "Draft" watermark.
 
-### Requirement: Action menu per facet chip
-Each facet chip SHALL have an action menu with:
-- Edit: navigate to /build/{facetId}
-- View Live: open /:formId?v={nickname} in a new browser tab
-  (disabled/grayed for archived facets)
-- Export CSV: open the CSV export modal (see csv-export spec)
-- Delete facet: delete this facet with confirmation (see facet deletion below)
-- Archive: set facets.status = 'archived' (with confirmation prompt)
-
-### Requirement: Facet deletion
-The system SHALL allow deleting individual facets from the action menu.
-On delete confirmation the system SHALL:
-1. Delete the facet row (CASCADE deletes related submissions, responses,
-   and facet_nickname_history rows)
-2. If the deleted facet was is_default = true and other facets remain,
-   auto-promote the oldest remaining facet to is_default = true
-3. If the deleted facet was the last facet on the form, delete the
-   entire form (a form cannot exist without at least one facet)
-The system SHALL show a confirmation dialog warning that all response
-data for this facet will be permanently deleted.
-
-### Requirement: Form deletion
-The system SHALL provide a "Delete form" option in a form-level action menu
-(e.g., a kebab menu on the form card header).
-On confirmation the system SHALL delete the form row. CASCADE SHALL delete
-all facets, submissions, responses, round_robin_log entries, and
-facet_nickname_history rows.
-The system SHALL show a confirmation dialog warning that all data for
-this form and all its facets will be permanently deleted.
+### Requirement: Form-level action menu
+The system SHALL provide a kebab menu on each form card header with:
+- Archive form: set all non-archived facets to status = 'archived'
+  (with confirmation dialog warning that all URLs will stop working).
+  Hidden when all facets are already archived.
+- Delete form: delete the form row. CASCADE SHALL delete all facets,
+  submissions, responses, round_robin_log entries, and
+  facet_nickname_history rows.
+  The system SHALL show a confirmation dialog warning that all data for
+  this form and all its facets will be permanently deleted.
 
 ### Requirement: Round-robin toggle on card
 The round-robin toggle SHALL be visible on a form card when the form has
@@ -105,25 +94,11 @@ a prompt and a "Create your first form" CTA button.
 - WHEN the dashboard renders
 - THEN the form card shows the static public/thumbnail-placeholder.svg
 
-#### Scenario: Archive confirmation
-- GIVEN a facet chip action menu is open
-- WHEN the user selects "Archive"
-- THEN the system shows a confirmation prompt
-- WHEN the user confirms
-- THEN facets.status is set to 'archived'
-- AND the facet chip updates to archived styling
-
-#### Scenario: Delete facet (not last)
-- GIVEN a form has 3 facets and the user opens the action menu on facet "variant-b"
-- WHEN they select "Delete facet" and confirm
-- THEN the facet row and all its data are deleted
-- AND the form card updates to show 2 remaining facets
-
-#### Scenario: Delete last facet cascades to form
-- GIVEN a form has 1 remaining facet
-- WHEN the user deletes that facet and confirms
-- THEN the facet and the entire form are deleted
-- AND the form card disappears from the dashboard
+#### Scenario: Archive form
+- GIVEN a form card with active facets
+- WHEN the user selects "Archive form" from the form menu and confirms
+- THEN all non-archived facets are set to status 'archived'
+- AND the form card updates to show "Archived" badge
 
 #### Scenario: Delete form
 - GIVEN a form card with 3 facets

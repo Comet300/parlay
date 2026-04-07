@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { Copy, Check, MoreVertical, Archive } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import { FacetSwitcher } from './facet-switcher'
-import { updateFormTitle } from '~/lib/server/forms'
+import { archiveForm, updateFormTitle } from '~/lib/server/forms'
 import { updateFacetStatus } from '~/lib/server/facets'
 import { useBuilderStore } from '~/lib/stores/builder-store'
+import { useNavigate } from '@tanstack/react-router'
 
 interface BuilderToolbarProps {
   facetId: string
@@ -33,11 +34,18 @@ export function BuilderToolbar({
   onRefresh,
 }: BuilderToolbarProps) {
   const [title, setTitle] = useState(formTitle)
+
+  // Sync title when switching facets/forms
+  useEffect(() => { setTitle(formTitle) }, [formTitle])
   const [publishing, setPublishing] = useState(false)
-  const [showUrl, setShowUrl] = useState(facetStatus === 'active')
+  const [unpublishing, setUnpublishing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmArchive, setConfirmArchive] = useState(false)
   const isDirty = useBuilderStore((s) => s.isDirty)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   const handleTitleBlur = useCallback(() => {
     if (title !== formTitle) {
@@ -53,12 +61,36 @@ export function BuilderToolbar({
     setPublishing(true)
     try {
       await updateFacetStatus({ data: { facetId, newStatus: 'active' } })
-      setShowUrl(true)
       onRefresh()
     } finally {
       setPublishing(false)
     }
   }
+
+  async function handleUnpublish() {
+    setUnpublishing(true)
+    try {
+      await updateFacetStatus({ data: { facetId, newStatus: 'draft' } })
+      onRefresh()
+    } finally {
+      setUnpublishing(false)
+    }
+  }
+
+  async function handleArchiveForm() {
+    setConfirmArchive(false)
+    await archiveForm({ data: { formId } })
+    navigate({ to: '/dashboard' })
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuOpen])
 
   const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${formId}?v=${facetNickname}`
 
@@ -94,19 +126,65 @@ export function BuilderToolbar({
 
       <div className="flex-1" />
 
-      {/* Publish / URL */}
+      {/* Publish / Unpublish / URL */}
       {facetStatus === 'draft' && (
         <Button size="sm" onClick={handlePublish} disabled={publishing}>
           {publishing ? 'Publishing...' : 'Publish'}
         </Button>
       )}
 
-      {showUrl && facetStatus === 'active' && (
-        <div className="flex items-center gap-1.5 text-xs text-text-muted bg-light rounded-lg px-2.5 py-1.5">
-          <span className="truncate max-w-[200px]">{publicUrl}</span>
-          <button onClick={handleCopy} className="p-0.5 rounded hover:bg-black/5" title="Copy URL">
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-          </button>
+      {facetStatus === 'active' && (
+        <>
+          {facetStatus === 'active' && (
+            <div className="flex items-center gap-1.5 text-xs text-text-muted bg-light rounded-lg px-2.5 py-1.5">
+              <span className="truncate max-w-[200px]">{publicUrl}</span>
+              <button onClick={handleCopy} className="p-0.5 rounded hover:bg-black/5" title="Copy URL">
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          )}
+          <Button size="sm" variant="secondary" onClick={handleUnpublish} disabled={unpublishing}>
+            {unpublishing ? 'Unpublishing...' : 'Unpublish'}
+          </Button>
+        </>
+      )}
+
+      {/* Form actions menu */}
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="p-1.5 rounded hover:bg-light transition-colors"
+          aria-label="Form actions"
+        >
+          <MoreVertical className="h-4 w-4 text-text-muted" />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full mt-1 z-30 w-48 rounded-lg border border-border bg-surface shadow-lg py-1">
+            <button
+              onClick={() => { setMenuOpen(false); setConfirmArchive(true) }}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+            >
+              <Archive className="h-3.5 w-3.5" /> Archive form
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Archive form confirmation */}
+      {confirmArchive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setConfirmArchive(false)}>
+          <div className="bg-surface border border-border rounded-xl p-6 shadow-lg max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-text">Archive form</h3>
+            <p className="mt-2 text-sm text-text-muted">Archive "{formTitle}"? All facets will be archived and URLs will stop working.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setConfirmArchive(false)} className="px-3 py-1.5 text-sm rounded-lg border border-border text-text hover:bg-light">
+                Cancel
+              </button>
+              <button onClick={handleArchiveForm} className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600">
+                Archive
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

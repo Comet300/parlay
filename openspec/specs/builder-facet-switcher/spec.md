@@ -26,9 +26,11 @@ On confirm (Enter key or confirm button):
 The new facet SHALL be fully independent — edits SHALL NOT affect the source.
 
 ### Requirement: Set as default
-When round_robin_enabled = false, the system SHALL show a "Set as default"
-context action per non-selected, non-default facet in the dropdown.
-Selecting it SHALL execute the two-step SQL transaction to update is_default.
+When round_robin_enabled = false and the form has >1 facet, the system
+SHALL show an inline "Default:" dropdown at the bottom of the switcher
+listing all facets. Changing the selection SHALL execute the two-step
+SQL transaction to update is_default. The dropdown SHALL be hidden when
+round_robin_enabled = true.
 
 ### Requirement: Rename facet
 The system SHALL provide a rename option per facet via a context menu or
@@ -54,10 +56,10 @@ When creating a new facet, the system SHALL validate the entered nickname:
 - AND navigates to /build/{newFacetId}
 - AND the new facet is listed in the switcher dropdown
 
-#### Scenario: Set as default
+#### Scenario: Set as default via dropdown
 - GIVEN round_robin_enabled = false on the form
 - AND the form has 3 facets: "default" (default), "variant-a", "variant-b"
-- WHEN the user selects "Set as default" next to "variant-a"
+- WHEN the user selects "variant-a" from the "Default:" dropdown
 - THEN the system executes the two-step SQL transaction
 - AND "variant-a" becomes is_default = true
 - AND "default" becomes is_default = false

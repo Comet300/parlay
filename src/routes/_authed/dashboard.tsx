@@ -30,7 +30,7 @@ export const Route = createFileRoute('/_authed/dashboard')({
         page: deps.page ?? 1,
         pageSize: 12,
         search: deps.search,
-        sort: deps.sort ?? 'updated_at',
+        sort: deps.sort ?? 'created_at_desc',
       },
     }),
   component: DashboardComponent,
@@ -38,15 +38,15 @@ export const Route = createFileRoute('/_authed/dashboard')({
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'has_active', label: 'Has Active' },
-  { value: 'all_draft', label: 'All Draft' },
-  { value: 'has_archived', label: 'Has Archived' },
+  { value: 'has_active', label: 'Active' },
+  { value: 'all_draft', label: 'Draft' },
+  { value: 'has_archived', label: 'Archived' },
 ]
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'updated_at', label: 'Last updated' },
   { value: 'created_at_desc', label: 'Newest first' },
   { value: 'created_at_asc', label: 'Oldest first' },
+  { value: 'updated_at', label: 'Last updated' },
   { value: 'title', label: 'Alphabetical (A-Z)' },
 ]
 
@@ -177,7 +177,7 @@ function DashboardComponent() {
 
         {/* Sort */}
         <select
-          value={search.sort ?? 'updated_at'}
+          value={search.sort ?? 'created_at_desc'}
           onChange={(e) =>
             navigate({
               search: (prev) => ({

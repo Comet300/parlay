@@ -49,6 +49,12 @@ responses, shuffleSeeds, and checkpointsPassed, then navigate to the last
 visited position.
 Choosing "Start fresh" SHALL clear the session and begin from the Start node.
 
+When the resolved facet nickname does NOT match the stored session's
+facetNickname (e.g., visitor was re-assigned to a different facet), the
+system SHALL silently discard the stale session and start fresh without
+prompting. This covers the case where a facet was archived and the visitor
+is resolved to a different facet on their next visit.
+
 ### Requirement: Always-tracked responses
 The system SHALL store all content node responses in session.responses
 regardless of the node's record_response flag.
@@ -82,20 +88,16 @@ after a successful submission (all responses written to Supabase and the
 submission row is marked is_complete = true).
 
 #### Scenario: Resume after browser close
-- GIVEN a respondent completed pages 1 and 2 of a 5-page form and closed the browser
-- WHEN they reopen /:formId
-- AND Phase 2 resolves to the same facet via fingerprint
+- WHEN a respondent with an existing session returns to /:formId
+- THEN Phase 2 resolves to the same facet via fingerprint
 - THEN the system finds the localStorage session with matching facetNickname
-- AND offers "Resume where you left off" vs "Start fresh"
-- WHEN they choose "Resume"
-- THEN the player navigates directly to page 3 (client-side state, no URL change)
+- THEN offers "Resume where you left off" vs "Start fresh"
 
-#### Scenario: Different facet in session
-- GIVEN a session exists in localStorage with facetNickname = "horizon"
-- AND the current visitor_id is now assigned to facet "compass"
-- WHEN the player loads
-- THEN the system does NOT offer to resume (facet mismatch)
-- AND starts fresh with facet "compass"
+#### Scenario: Facet mismatch discards session
+- WHEN a session exists with facetNickname = "horizon"
+- THEN but the visitor is now resolved to facet "compass"
+- THEN the system discards the "horizon" session without prompting
+- THEN starts fresh with facet "compass"
 
 #### Scenario: Shuffle stability on resume
 - GIVEN a respondent was on a page with a shuffled multi-choice question

@@ -120,7 +120,9 @@ The builder toolbar SHALL include a "Form Settings" button that opens a
 side panel (desktop) or slide-over menu (mobile) containing:
 - Color scheme configuration (theme picker, color pickers)
 - Component gallery carousel
-- Round-robin toggle (when the form has >1 facet)
+
+The round-robin toggle and default facet selector live in the FacetSwitcher
+dropdown (see builder-facet-switcher spec), not in the Form Settings panel.
 
 ### Requirement: Mobile builder layout
 On mobile viewports (< 768px), the builder SHALL:
@@ -146,6 +148,9 @@ The builder toolbar (top of the builder page) SHALL contain, in order:
   - Archived facet: "Re-activate" button
   Publish is blocked if any publish validation fails (see publish
   validation checklist requirement). Shows an error tooltip listing all blockers.
+- Form actions kebab menu (rightmost) with:
+  - Archive form: sets all non-archived facets to status 'archived'
+    (with confirmation dialog) and navigates to /dashboard
 
 ### Requirement: Canvas node visual indicators
 Every canvas node (except Start/End) SHALL display:

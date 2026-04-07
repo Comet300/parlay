@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from '@tanstack/react-router'
 import { MoreVertical, ExternalLink, Pencil, Trash2, Archive, Play, Pause, RotateCcw, FileSpreadsheet } from 'lucide-react'
 import { Card } from '~/components/ui/card'
 import { deleteFacet, updateFacetStatus, setDefaultFacet } from '~/lib/server/facets'
-import { deleteForm, updateFormRoundRobin } from '~/lib/server/forms'
+import { archiveForm, deleteForm, updateFormRoundRobin } from '~/lib/server/forms'
 
 interface Facet {
   id: string
@@ -65,17 +66,33 @@ function FacetChipMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [confirmArchive, setConfirmArchive] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    setMenuPos({ top: rect.bottom + 4, left: rect.right })
+  }, [])
 
   useEffect(() => {
     if (!open) return
+    updatePosition()
     function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
+    function handleScroll() { updatePosition() }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
+    window.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [open, updatePosition])
 
   async function handleStatusChange(newStatus: string) {
     setOpen(false)
@@ -90,15 +107,10 @@ function FacetChipMenu({
     onAction()
   }
 
-  async function handleArchive() {
-    setConfirmArchive(false)
-    setOpen(false)
-    await handleStatusChange('archived')
-  }
-
   return (
-    <div className="relative" ref={menuRef}>
+    <>
       <button
+        ref={triggerRef}
         onClick={(e) => { e.preventDefault(); setOpen(!open) }}
         className="p-0.5 rounded hover:bg-black/10 transition-colors"
         aria-label={`Actions for ${facet.nickname}`}
@@ -106,8 +118,12 @@ function FacetChipMenu({
         <MoreVertical className="h-3 w-3" />
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-lg border border-border bg-surface shadow-lg py-1">
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, transform: 'translateX(-100%)' }}
+          className="z-50 w-44 rounded-lg border border-border bg-white shadow-lg py-1"
+        >
           <Link
             to="/build/$facetId"
             params={{ facetId: facet.id }}
@@ -121,7 +137,7 @@ function FacetChipMenu({
               window.open(`/${formId}?v=${facet.nickname}`, '_blank')
               setOpen(false)
             }}
-            disabled={facet.status === 'archived'}
+            disabled={facet.status !== 'active'}
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full disabled:opacity-40 disabled:pointer-events-none"
           >
             <ExternalLink className="h-3.5 w-3.5" /> View Live
@@ -142,20 +158,12 @@ function FacetChipMenu({
             </button>
           )}
           {facet.status === 'active' && (
-            <>
-              <button
-                onClick={() => handleStatusChange('draft')}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
-              >
-                <Pause className="h-3.5 w-3.5" /> Unpublish
-              </button>
-              <button
-                onClick={() => { setOpen(false); setConfirmArchive(true) }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
-              >
-                <Archive className="h-3.5 w-3.5" /> Archive
-              </button>
-            </>
+            <button
+              onClick={() => handleStatusChange('draft')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+            >
+              <Pause className="h-3.5 w-3.5" /> Unpublish
+            </button>
           )}
           {facet.status === 'archived' && (
             <button
@@ -172,7 +180,8 @@ function FacetChipMenu({
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete facet
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <ConfirmDialog
@@ -182,15 +191,7 @@ function FacetChipMenu({
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
       />
-      <ConfirmDialog
-        open={confirmArchive}
-        title="Archive facet"
-        message={`Archive "${facet.nickname}"? It will no longer be accessible to respondents.`}
-        confirmLabel="Archive"
-        onConfirm={handleArchive}
-        onCancel={() => setConfirmArchive(false)}
-      />
-    </div>
+    </>
   )
 }
 
@@ -203,10 +204,13 @@ export function FormCard({
 }) {
   const [formMenuOpen, setFormMenuOpen] = useState(false)
   const [confirmDeleteForm, setConfirmDeleteForm] = useState(false)
+  const [confirmArchiveForm, setConfirmArchiveForm] = useState(false)
   const formMenuRef = useRef<HTMLDivElement>(null)
 
   const defaultFacet = form.facets.find((f) => f.is_default) ?? form.facets[0]
   const allDraft = form.facets.every((f) => f.status === 'draft')
+  const allArchived = form.facets.every((f) => f.status === 'archived')
+  const hasActive = form.facets.some((f) => f.status === 'active')
 
   useEffect(() => {
     if (!formMenuOpen) return
@@ -220,6 +224,12 @@ export function FormCard({
   async function handleDeleteForm() {
     setConfirmDeleteForm(false)
     await deleteForm({ data: { formId: form.id } })
+    onRefresh()
+  }
+
+  async function handleArchiveForm() {
+    setConfirmArchiveForm(false)
+    await archiveForm({ data: { formId: form.id } })
     onRefresh()
   }
 
@@ -251,28 +261,36 @@ export function FormCard({
   return (
     <Card className="overflow-hidden flex flex-col">
       {/* Thumbnail */}
-      <Link to="/build/$facetId" params={{ facetId: defaultFacet?.id ?? '' }} className="block relative">
+      <Link to="/build/$facetId" params={{ facetId: defaultFacet?.id ?? '' }} className="block">
         <img src="/thumbnail-placeholder.svg" alt="" className="w-full h-36 object-cover" />
-        {allDraft && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold text-text-muted/30 uppercase tracking-widest select-none">
-              Draft
-            </span>
-          </div>
-        )}
       </Link>
 
       {/* Content */}
       <div className="p-4 flex-1 flex flex-col gap-3">
         {/* Title + form menu */}
         <div className="flex items-start justify-between gap-2">
-          <Link
-            to="/build/$facetId"
-            params={{ facetId: defaultFacet?.id ?? '' }}
-            className="text-sm font-semibold text-text hover:text-primary truncate"
-          >
-            {form.title}
-          </Link>
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              to="/build/$facetId"
+              params={{ facetId: defaultFacet?.id ?? '' }}
+              className="text-sm font-semibold text-text hover:text-primary truncate"
+            >
+              {form.title}
+            </Link>
+            {allArchived ? (
+              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                Archived
+              </span>
+            ) : hasActive ? (
+              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                Active
+              </span>
+            ) : (
+              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                Draft
+              </span>
+            )}
+          </div>
           <div className="relative" ref={formMenuRef}>
             <button
               onClick={() => setFormMenuOpen(!formMenuOpen)}
@@ -282,7 +300,16 @@ export function FormCard({
               <MoreVertical className="h-4 w-4 text-text-muted" />
             </button>
             {formMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-lg border border-border bg-surface shadow-lg py-1">
+              <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-lg border border-border bg-surface shadow-lg py-1">
+                {!allArchived && (
+                  <button
+                    onClick={() => { setFormMenuOpen(false); setConfirmArchiveForm(true) }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+                  >
+                    <Archive className="h-3.5 w-3.5" /> Archive form
+                  </button>
+                )}
+                <div className="border-t border-border my-1" />
                 <button
                   onClick={() => { setFormMenuOpen(false); setConfirmDeleteForm(true) }}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 w-full"
@@ -294,24 +321,26 @@ export function FormCard({
           </div>
         </div>
 
-        {/* Facet chips */}
-        <div className="flex flex-wrap gap-1.5">
-          {form.facets.map((facet) => {
-            const chipColor =
-              facet.status === 'active'
-                ? 'bg-light text-primary'
-                : facet.status === 'archived'
-                  ? 'bg-gray-100 text-gray-400'
-                  : 'bg-gray-100 text-gray-500 opacity-60'
-            return (
-              <span key={facet.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${chipColor}`}>
-                {facet.nickname}
-                {facet.is_default && <span className="text-[10px]">(default)</span>}
-                <FacetChipMenu facet={facet} formId={form.id} onAction={onRefresh} />
-              </span>
-            )
-          })}
-        </div>
+        {/* Facet chips with per-chip action menu — hidden when there's only one facet */}
+        {form.facets.length > 1 && (
+          <div className="flex flex-wrap gap-1.5">
+            {form.facets.map((facet) => {
+              const chipColor =
+                facet.status === 'active'
+                  ? 'bg-light text-primary'
+                  : facet.status === 'archived'
+                    ? 'bg-gray-100 text-gray-400'
+                    : 'bg-gray-100 text-gray-500 opacity-60'
+              return (
+                <span key={facet.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${chipColor}`}>
+                  {facet.nickname}
+                  {facet.is_default && !form.round_robin_enabled && <span className="text-[10px]">(default)</span>}
+                  <FacetChipMenu facet={facet} formId={form.id} onAction={onRefresh} />
+                </span>
+              )
+            })}
+          </div>
+        )}
 
         {/* Round-robin toggle + default selector */}
         {form.facets.length > 1 && (
@@ -363,6 +392,14 @@ export function FormCard({
         )}
       </div>
 
+      <ConfirmDialog
+        open={confirmArchiveForm}
+        title="Archive form"
+        message={`Archive "${form.title}"? All facets will be archived and URLs will stop working.`}
+        confirmLabel="Archive"
+        onConfirm={handleArchiveForm}
+        onCancel={() => setConfirmArchiveForm(false)}
+      />
       <ConfirmDialog
         open={confirmDeleteForm}
         title="Delete form"

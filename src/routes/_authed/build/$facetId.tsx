@@ -24,6 +24,7 @@ function BuilderComponent() {
   return (
     <div className="flex flex-col h-full -m-6 -mt-6 md:-mt-6">
       <BuilderToolbar
+        key={facetId}
         facetId={facetId}
         formId={data.form.id}
         formTitle={data.form.title}

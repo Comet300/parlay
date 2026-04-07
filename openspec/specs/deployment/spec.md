@@ -35,6 +35,26 @@ The project's `.env.example` SHALL serve as the reference for which environment 
 - **WHEN** the production build is inspected
 - **THEN** server-only environment variables do not appear in any client-side JavaScript bundle
 
+### Requirement: Custom SSR stream handler
+The project SHALL include a custom server entry point (`src/server.tsx`)
+that wraps TanStack Start's default stream handler. This is required because
+TanStack Router only propagates status codes for redirects (3xx), notFound
+(404), and errors (500). Custom status codes set via `setResponseStatus()`
+in route loaders (e.g. 410 Gone for unavailable forms) are ignored by the
+default handler.
+
+The custom handler SHALL:
+1. Render the router to a stream using `renderRouterToStream`
+2. Read the h3 event status via `getResponseStatus()` after rendering
+3. If the event status is non-200 and the response status is 200, re-wrap
+   the Response with the correct status code
+4. Otherwise, return the response unchanged
+
+#### Scenario: Loader sets 410 Gone
+- GIVEN a route loader calls `setResponseStatus(410)` for an unavailable form
+- WHEN the SSR handler renders the response
+- THEN the HTTP response has status 410 (not 200)
+
 ### Requirement: Production build script
 The `package.json` SHALL include a `build` script that produces a production-ready Vercel deployment. The `start` script SHALL be configured for local production testing if supported by TanStack Start.
 

@@ -97,6 +97,21 @@ export const updateFormRoundRobin = createServerFn({ method: 'POST' })
     if (error) throw new Error(error.message)
   })
 
+export const archiveForm = createServerFn({ method: 'POST' })
+  .inputValidator((data: { formId: string }) => data)
+  .handler(async ({ data }) => {
+    const userId = await getSessionUserId()
+    const supabase = createAuthenticatedSupabaseClient(userId)
+
+    const { error } = await supabase
+      .from('facets')
+      .update({ status: 'archived' })
+      .eq('form_id', data.formId)
+      .neq('status', 'archived')
+
+    if (error) throw new Error(error.message)
+  })
+
 export const deleteForm = createServerFn({ method: 'POST' })
   .inputValidator((data: { formId: string }) => data)
   .handler(async ({ data }) => {

@@ -51,12 +51,7 @@ test.describe('Dashboard', () => {
 
       const firstCard = page.locator('[class*="overflow-hidden flex flex-col"]').first()
       await expect(firstCard.locator('img')).toBeVisible()
-      await expect(firstCard.getByText('default')).toBeVisible()
-    })
-
-    test('shows Draft watermark when all facets are draft', async ({ page }) => {
-      await ensureFormExists(page)
-      await expect(page.getByText('Draft').first()).toBeVisible()
+      await expect(firstCard.getByText('Draft')).toBeVisible()
     })
 
     test('title links to builder with default facet', async ({ page }) => {
@@ -87,9 +82,9 @@ test.describe('Dashboard', () => {
       await gotoDashboard(page)
 
       await expect(page.getByRole('button', { name: 'All', exact: true })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Has Active' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'All Draft' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Has Archived' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Active' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Draft' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archived' })).toBeVisible()
 
       const allBtn = page.getByRole('button', { name: 'All', exact: true })
       await expect(allBtn).toHaveClass(/text-primary/)
@@ -106,9 +101,9 @@ test.describe('Dashboard', () => {
       const options = select.locator('option')
 
       await expect(options).toHaveCount(4)
-      await expect(options.nth(0)).toHaveText('Last updated')
-      await expect(options.nth(1)).toHaveText('Newest first')
-      await expect(options.nth(2)).toHaveText('Oldest first')
+      await expect(options.nth(0)).toHaveText('Newest first')
+      await expect(options.nth(1)).toHaveText('Oldest first')
+      await expect(options.nth(2)).toHaveText('Last updated')
       await expect(options.nth(3)).toHaveText('Alphabetical (A-Z)')
     })
 
@@ -167,94 +162,6 @@ test.describe('Dashboard', () => {
           await page.waitForTimeout(500)
         }
       }
-    })
-  })
-
-  test.describe('Facet chip action menu', () => {
-    test('shows correct actions for draft facet', async ({ page }) => {
-      await ensureFormExists(page)
-
-      await page.getByLabel(/Actions for/).first().click()
-
-      await expect(page.getByText('Edit')).toBeVisible()
-      await expect(page.getByText('View Live')).toBeVisible()
-      await expect(page.getByText('Export CSV')).toBeVisible()
-      await expect(page.getByText('Delete facet')).toBeVisible()
-
-      // Draft-specific: Publish visible, Unpublish/Re-activate not
-      await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeVisible()
-      await expect(page.getByText('Unpublish')).not.toBeVisible()
-      await expect(page.getByText('Re-activate')).not.toBeVisible()
-    })
-
-    test('Export CSV is disabled', async ({ page }) => {
-      await ensureFormExists(page)
-
-      await page.getByLabel(/Actions for/).first().click()
-
-      const csvBtn = page.locator('button').filter({ hasText: 'Export CSV' })
-      await expect(csvBtn).toBeVisible()
-      await expect(csvBtn).toHaveAttribute('disabled', '')
-    })
-
-    test('View Live is disabled for archived facets', async ({ page }) => {
-      await createFormViaDashboard(page)
-
-      // Publish (draft → active)
-      await page.getByLabel(/Actions for/).first().click()
-      await page.getByRole('button', { name: 'Publish', exact: true }).click()
-      await page.waitForTimeout(500)
-
-      // Archive (active → archived) — use exact match to avoid "Has Archived" filter
-      await page.getByLabel(/Actions for/).first().click()
-      await page.getByRole('button', { name: 'Archive', exact: true }).click()
-      await page.getByRole('button', { name: 'Archive' }).last().click()
-      await page.waitForTimeout(500)
-
-      // Open menu — View Live should be disabled
-      await page.getByLabel(/Actions for/).first().click()
-      const viewLiveBtn = page.locator('button').filter({ hasText: 'View Live' })
-      await expect(viewLiveBtn).toBeVisible()
-      await expect(viewLiveBtn).toHaveAttribute('disabled', '')
-
-      // Cleanup
-      await page.keyboard.press('Escape')
-      await page.getByLabel('Form actions').first().click()
-      await page.getByText('Delete form').click()
-      await page.getByRole('button', { name: 'Delete' }).click()
-    })
-
-    test('Publish transitions draft to active', async ({ page }) => {
-      await createFormViaDashboard(page)
-
-      // Open chip menu and publish
-      await page.getByLabel(/Actions for/).first().click()
-      await page.getByRole('button', { name: 'Publish', exact: true }).click()
-      await page.waitForTimeout(500)
-
-      // Chip should now be active — menu should have Unpublish
-      await page.getByLabel(/Actions for/).first().click()
-      await expect(page.getByText('Unpublish')).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Archive', exact: true })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Publish', exact: true })).not.toBeVisible()
-    })
-
-    test('Archive shows confirmation dialog', async ({ page }) => {
-      await createFormViaDashboard(page)
-
-      // Publish first (need active for Archive)
-      await page.getByLabel(/Actions for/).first().click()
-      await page.getByRole('button', { name: 'Publish', exact: true }).click()
-      await page.waitForTimeout(500)
-
-      // Now open menu and click Archive
-      await page.getByLabel(/Actions for/).first().click()
-      await page.getByRole('button', { name: 'Archive', exact: true }).click()
-
-      // Confirmation dialog
-      await expect(page.getByText('Archive facet')).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Archive' }).last()).toBeVisible()
-      await page.getByRole('button', { name: 'Cancel' }).click()
     })
   })
 

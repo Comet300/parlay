@@ -75,7 +75,7 @@ test.describe('Builder — Toolbar', () => {
     await createFormAndGoToBuilder(page)
     await page.getByRole('button', { name: 'Publish' }).click()
     await expect(page.locator('[title="Copy URL"]')).toBeVisible({ timeout: 5_000 })
-    await expect(page.getByRole('button', { name: 'Publish' })).not.toBeVisible()
+    await expect(page.getByRole('button', { name: 'Unpublish' })).toBeVisible()
   })
 })
 
@@ -107,8 +107,8 @@ test.describe('Builder — Facet Switcher', () => {
     // Verify switcher lists both facets
     await openSwitcher(page)
     const dd = switcherDropdown(page)
-    await expect(dd.getByText('default')).toBeVisible()
-    await expect(dd.getByText('variant-a')).toBeVisible()
+    await expect(dd.locator('button.text-left.truncate').filter({ hasText: 'default' })).toBeVisible()
+    await expect(dd.locator('button.text-left.truncate').filter({ hasText: 'variant-a' })).toBeVisible()
   })
 
   test('Create facet rejects invalid nickname', async ({ page }) => {
@@ -159,7 +159,7 @@ test.describe('Builder — Facet Switcher', () => {
 
     // Verify
     await openSwitcher(page)
-    await expect(switcherDropdown(page).getByText('renamed')).toBeVisible()
+    await expect(switcherDropdown(page).locator('button.text-left.truncate').filter({ hasText: 'renamed' })).toBeVisible()
   })
 
   test('Set as default (when round-robin off)', async ({ page }) => {
@@ -186,20 +186,28 @@ test.describe('Builder — Facet Switcher', () => {
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Now on "default" page. Set "alt-facet" as default via star icon.
+    // Now on "default" page. Set "alt-facet" as default via the Default dropdown.
     await openSwitcher(page)
-    const starButton = switcherDropdown(page).locator('[title="Set as default"]')
-    await expect(starButton).toBeVisible()
-    await starButton.click()
+    const dd = switcherDropdown(page)
+
+    // The "Default:" <select> appears when round-robin is off and there are >1 facets
+    const defaultSelect = dd.locator('select').last()
+    await expect(defaultSelect).toBeVisible()
+
+    // Find the option for "alt-facet" and select it
+    const altOption = defaultSelect.locator('option', { hasText: 'alt-facet' })
+    const altFacetId = await altOption.getAttribute('value')
+    await defaultSelect.selectOption(altFacetId!)
     await page.waitForTimeout(500)
 
     // Reload to get clean state after router.invalidate()
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Verify
+    // Verify: open switcher and check "alt-facet" has the (default) label
     await openSwitcher(page)
-    await expect(switcherDropdown(page).getByText('(default)')).toBeVisible()
+    const altFacetBtn = switcherDropdown(page).locator('button.text-left.truncate').filter({ hasText: 'alt-facet' })
+    await expect(altFacetBtn).toContainText('(default)')
   })
 
   test('Rename conflict — rejects nickname held by sibling', async ({ page }) => {
