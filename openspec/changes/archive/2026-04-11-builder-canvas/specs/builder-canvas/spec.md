@@ -36,11 +36,6 @@ The system SHALL support the following keyboard shortcuts when the canvas has fo
 
 Undo/redo SHALL maintain a stack of up to 50 canvas states. The stack SHALL be cleared when switching facets.
 
-### Requirement: Edge selection and deletion
-The system SHALL allow users to click an edge to select it (visual highlight).
-Selected edges SHALL be deletable via Delete/Backspace.
-When a node is deleted, all edges connected to that node SHALL be cascade-deleted.
-
 #### Scenario: Delete node via keyboard
 - **WHEN** a Page node with 2 child Likert nodes is selected on the canvas
 - **AND** the user presses Delete
@@ -61,13 +56,6 @@ When a node is deleted, all edges connected to that node SHALL be cascade-delete
 - **THEN** the popup closes
 - **AND** the Likert node is deselected on the canvas
 
-#### Scenario: Delete edge via keyboard
-- **WHEN** a user clicks an edge between a Page and End
-- **THEN** the edge is visually highlighted as selected
-- **WHEN** the user presses Delete
-- **THEN** the edge is removed from the canvas
-- **AND** the Page now shows a dead-path warning (no outgoing edge)
-
 #### Scenario: Copy and paste nodes
 - **WHEN** a user selects a Page node containing 2 Likert children
 - **AND** presses Ctrl+C then Ctrl+V
@@ -80,3 +68,15 @@ When a node is deleted, all edges connected to that node SHALL be cascade-delete
 - **AND** presses Ctrl+V
 - **THEN** the system shows a toast: "Copied nodes must include their parent container"
 - **AND** nothing is pasted
+
+### Requirement: Edge selection and deletion
+The system SHALL allow users to click an edge to select it (visual highlight).
+Selected edges SHALL be deletable via Delete/Backspace.
+When a node is deleted, all edges connected to that node SHALL be cascade-deleted.
+
+#### Scenario: Delete edge via keyboard
+- **WHEN** a user clicks an edge between a Page and End
+- **THEN** the edge is visually highlighted as selected
+- **WHEN** the user presses Delete
+- **THEN** the edge is removed from the canvas
+- **AND** the Page now shows a dead-path warning (no outgoing edge)
