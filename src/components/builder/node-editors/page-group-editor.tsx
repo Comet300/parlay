@@ -11,8 +11,8 @@ export function PageGroupEditor({ nodeId }: { nodeId: string }) {
   const d = node.data
 
   return (
-    <div className="p-3">
-      <h3 className="text-sm font-semibold mb-3">Page Group</h3>
+    <div className="p-3 flex flex-col h-full">
+      <h3 className="text-sm font-semibold mb-3 shrink-0">Page Group</h3>
       <EditorField label="Label">
         <EditorInput
           value={d.label}
@@ -59,7 +59,7 @@ export function PageGroupEditor({ nodeId }: { nodeId: string }) {
           onChange={(v) => updateNodeData(nodeId, { is_checkpoint: v } as any)}
         />
       )}
-      <EditorField label="Header content">
+      <EditorField label="Header content" className="flex-1 flex flex-col">
         <CrepeEditorField
           value={d.headerContent}
           onChange={(v) => updateNodeData(nodeId, { headerContent: v } as any)}

@@ -37,12 +37,13 @@ The project SHALL install and pin the following production dependencies:
 - `jsonwebtoken` (JWT signing for Supabase bridging)
 - `resend` (transactional email)
 - `@xyflow/react` (React Flow v12)
-- `@milkdown/crepe`, `@milkdown/kit`, and `@milkdown/react` (Milkdown Crepe editor with React integration)
+- `@milkdown/crepe`, `@milkdown/kit`, and `@milkdown/react` (Milkdown Crepe editor; Crepe is instantiated directly — see builder-nodes spec)
 - `zustand` (state management)
 - `tailwindcss` (styling)
 - `framer-motion` (animation)
 - `@fingerprintjs/fingerprintjs` (visitor identification)
 - `lucide-react` (icon library)
+- `sonner` (toast notifications — used by the builder for drop validation feedback)
 
 Dev dependencies SHALL include TypeScript, `@types/node`, `@types/jsonwebtoken`, `@types/pg`, and ESLint with TypeScript support.
 
@@ -124,7 +125,7 @@ The project SHALL include a `.env.example` file documenting all required and opt
 - **THEN** the application starts with all required configuration present
 
 ### Requirement: Root layout with providers
-The `__root.tsx` root layout SHALL wrap the application in necessary providers (React Flow provider is NOT needed at root — only in the builder). It SHALL import the global stylesheet and render `<Outlet />`.
+The `__root.tsx` root layout SHALL wrap the application in necessary providers (React Flow provider is NOT needed at root — only in the builder). It SHALL import the global stylesheet and render `<Outlet />`. It SHALL also mount a single `<Toaster>` from `sonner` at the root (positioned `bottom-center`, `richColors` enabled) so that any page can emit toast notifications without mounting its own provider.
 
 #### Scenario: Root layout renders
 - **WHEN** any route is visited

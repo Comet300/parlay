@@ -1,0 +1,113 @@
+/* Compact overrides for Milkdown Crepe inside the builder popup */
+
+/* Top bar: prevent buttons from stealing focus from ProseMirror */
+.crepe-compact .milkdown .milkdown-top-bar button,
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-heading-button,
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-item {
+  outline: none;
+}
+
+/* Top bar: compact sizing for the builder context */
+.crepe-compact .milkdown .milkdown-top-bar {
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 6px 6px 0 0;
+}
+
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-item {
+  width: 28px;
+  height: 28px;
+  margin: 4px 2px;
+}
+
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-item svg {
+  width: 18px;
+  height: 18px;
+}
+
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-heading-button {
+  height: 28px;
+  padding: 2px 4px 2px 8px;
+}
+
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-heading-label {
+  font-size: 12px;
+  min-width: 64px;
+}
+
+.crepe-compact .milkdown .milkdown-top-bar .top-bar-divider {
+  height: 18px;
+  margin: 6px;
+}
+
+/* Block handle: hide the + add button, keep only the drag handle */
+.crepe-compact .milkdown .milkdown-block-handle .operation-item:first-child {
+  display: none;
+}
+
+.crepe-compact .milkdown .milkdown-block-handle {
+  left: 4px !important;
+}
+
+/* Slash menu: hidden since we use TopBar for block creation */
+.crepe-compact .milkdown .milkdown-slash-menu {
+  display: none !important;
+}
+
+/* Selection toolbar: fixed so it escapes overflow-y:auto */
+.crepe-compact .milkdown .milkdown-toolbar {
+  z-index: 100;
+}
+
+/* Make the milkdown internals fill available height */
+.crepe-compact .milkdown {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.crepe-compact .milkdown .ProseMirror {
+  padding: 12px 16px 12px 36px;
+  flex: 1;
+}
+
+/* Scaled-down typography for compact popup */
+.crepe-compact .milkdown .ProseMirror h1 {
+  font-size: 20px;
+  line-height: 28px;
+  margin-top: 12px;
+}
+
+.crepe-compact .milkdown .ProseMirror h2 {
+  font-size: 17px;
+  line-height: 24px;
+  margin-top: 10px;
+}
+
+.crepe-compact .milkdown .ProseMirror h3 {
+  font-size: 15px;
+  line-height: 22px;
+  margin-top: 8px;
+}
+
+.crepe-compact .milkdown .ProseMirror h4,
+.crepe-compact .milkdown .ProseMirror h5,
+.crepe-compact .milkdown .ProseMirror h6 {
+  font-size: 14px;
+  line-height: 20px;
+  margin-top: 6px;
+}
+
+.crepe-compact .milkdown .ProseMirror p {
+  font-size: 13px;
+  line-height: 20px;
+  padding: 2px 0;
+}
+
+.crepe-compact .milkdown .ProseMirror code {
+  font-size: 12px;
+}
+
+.crepe-compact .milkdown .ProseMirror blockquote {
+  padding-left: 20px;
+}

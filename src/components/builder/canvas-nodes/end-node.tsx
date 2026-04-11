@@ -1,17 +1,14 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import type { FlowNode } from '~/lib/node-registry/types'
+import { stripMarkdown } from './strip-markdown'
 
 export const EndCanvasNode = memo(function EndCanvasNode({
   data,
   selected,
 }: NodeProps<FlowNode>) {
   const content = (data as { markdownContent?: string }).markdownContent
-  const preview = content
-    ?.split('\n')
-    .find((l) => l.trim() && !l.startsWith('#'))
-    ?.trim()
-    .slice(0, 60)
+  const preview = stripMarkdown(content).slice(0, 50)
 
   return (
     <div

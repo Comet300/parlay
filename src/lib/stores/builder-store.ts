@@ -21,14 +21,26 @@ import { PAGE_TIER_TYPES, CONTENT_TIER_TYPES } from '~/lib/node-registry/types'
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 }
 
 const CONTAINER_NODE_TYPES = new Set<NodeTypeName>(['page', 'page_group', 'group'])
-const CONTAINER_PADDING = 20
-const CONTAINER_HEADER = 40
-const MIN_CONTAINER_W = 200
-const MIN_CONTAINER_H = 100
+
+// ─── Stacked layout constants ─────────────────────────────────────────
+// Children are laid out in a vertical stack inside containers (like Scratch)
+export const STACK_PADDING_X = 12
+export const STACK_PADDING_TOP = 44 // header area
+export const STACK_PADDING_BOTTOM = 12
+export const STACK_GAP = 8
+export const CHILD_WIDTH = 176
+export const CHILD_HEIGHT = 48
+export const CONTAINER_MIN_W = CHILD_WIDTH + STACK_PADDING_X * 2
+export const CONTAINER_MIN_H = STACK_PADDING_TOP + STACK_PADDING_BOTTOM
 
 // ─── Pure helpers ──────────────────────────────────────────────────────
 
-function resizeContainers(nodes: FlowNode[]): FlowNode[] {
+/**
+ * Position children in a vertical stack inside their parent containers
+ * and auto-size containers to fit. Children are ordered by their current
+ * y position (preserving user reorder via drag).
+ */
+function stackChildren(nodes: FlowNode[]): FlowNode[] {
   const childrenByParent = new Map<string, FlowNode[]>()
   for (const node of nodes) {
     if (node.parentId) {
@@ -36,33 +48,53 @@ function resizeContainers(nodes: FlowNode[]): FlowNode[] {
       childrenByParent.get(node.parentId)!.push(node)
     }
   }
+
+  // Sort each parent's children by y position (stable order)
+  childrenByParent.forEach((children) => {
+    children.sort((a, b) => a.position.y - b.position.y)
+  })
+
   return nodes.map((node) => {
-    if (!CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)) return node
-    const children = childrenByParent.get(node.id)
-    if (!children || children.length === 0) return node
-    let maxRight = 0
-    let maxBottom = 0
-    for (const child of children) {
-      const cw = (child.measured?.width ?? 160) as number
-      const ch = (child.measured?.height ?? 40) as number
-      maxRight = Math.max(maxRight, child.position.x + cw)
-      maxBottom = Math.max(maxBottom, child.position.y + ch)
+    // Resize containers
+    if (CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)) {
+      const children = childrenByParent.get(node.id)
+      const childCount = children?.length ?? 0
+      const neededH = childCount > 0
+        ? STACK_PADDING_TOP + childCount * CHILD_HEIGHT + (childCount - 1) * STACK_GAP + STACK_PADDING_BOTTOM
+        : CONTAINER_MIN_H
+      return {
+        ...node,
+        style: {
+          ...node.style,
+          width: CONTAINER_MIN_W,
+          height: Math.max(CONTAINER_MIN_H, neededH),
+        },
+      }
     }
-    const neededW = Math.max(MIN_CONTAINER_W, maxRight + CONTAINER_PADDING)
-    const neededH = Math.max(MIN_CONTAINER_H, maxBottom + CONTAINER_PADDING + CONTAINER_HEADER)
-    const currentW = node.style?.width as number | undefined
-    const currentH = node.style?.height as number | undefined
-    if (currentW !== undefined && currentW >= neededW && currentH !== undefined && currentH >= neededH) {
-      return node
+
+    // Snap children to stack positions
+    if (node.parentId) {
+      const siblings = childrenByParent.get(node.parentId)
+      if (siblings) {
+        const index = siblings.indexOf(node)
+        const stackX = STACK_PADDING_X
+        const stackY = STACK_PADDING_TOP + index * (CHILD_HEIGHT + STACK_GAP)
+        if (node.position.x !== stackX || node.position.y !== stackY) {
+          return {
+            ...node,
+            position: { x: stackX, y: stackY },
+            style: { ...node.style, width: CHILD_WIDTH, height: CHILD_HEIGHT },
+            draggable: true, // still draggable for reorder
+          }
+        }
+        return {
+          ...node,
+          style: { ...node.style, width: CHILD_WIDTH, height: CHILD_HEIGHT },
+          draggable: true,
+        }
+      }
     }
-    return {
-      ...node,
-      style: {
-        ...node.style,
-        width: Math.max(currentW ?? MIN_CONTAINER_W, neededW),
-        height: Math.max(currentH ?? MIN_CONTAINER_H, neededH),
-      },
-    }
+    return node
   })
 }
 
@@ -157,17 +189,41 @@ function computeSlugConflicts(nodes: FlowNode[]): SlugConflict[] {
 }
 
 /**
+ * Shallow-compare two arrays of objects by a key (or by reference for primitives).
+ * Returns the previous array if content is equal, preventing unnecessary re-renders.
+ */
+function stableArray<T>(prev: T[], next: T[], key?: keyof T): T[] {
+  if (prev.length !== next.length) return next
+  for (let i = 0; i < next.length; i++) {
+    if (key ? prev[i][key] !== next[i][key] : prev[i] !== next[i]) return next
+  }
+  return prev
+}
+
+// Cache for derived state to avoid new references when content hasn't changed
+let prevDeadPaths: DeadPathInfo[] = []
+let prevSlugs: SlugInfo[] = []
+let prevSlugConflicts: SlugConflict[] = []
+
+/**
  * Recompute all derived state from nodes and edges.
  * Call this in every mutation that changes nodes or edges.
+ * Returns stable array references when content hasn't changed.
  */
 function withDerived(partial: { nodes: FlowNode[]; edges?: FlowEdge[] }, currentEdges: FlowEdge[]) {
   const edges = partial.edges ?? currentEdges
+  const deadPaths = stableArray(prevDeadPaths, computeDeadPaths(partial.nodes, edges), 'nodeId')
+  const slugs = stableArray(prevSlugs, computeSlugs(partial.nodes), 'nodeId')
+  const slugConflicts = stableArray(prevSlugConflicts, computeSlugConflicts(partial.nodes), 'slug')
+  prevDeadPaths = deadPaths
+  prevSlugs = slugs
+  prevSlugConflicts = slugConflicts
   return {
     ...partial,
     edges,
-    deadPaths: computeDeadPaths(partial.nodes, edges),
-    slugs: computeSlugs(partial.nodes),
-    slugConflicts: computeSlugConflicts(partial.nodes),
+    deadPaths,
+    slugs,
+    slugConflicts,
   }
 }
 
@@ -209,6 +265,12 @@ interface BuilderState {
   redo: () => void
   copyNodes: (nodeIds: string[]) => void
   paste: () => FlowNode[] | null
+  /** Temporarily detach a child from its parent for cross-container drag. */
+  detachNode: (nodeId: string, absolutePosition: { x: number; y: number }) => void
+  /** Snap all children to stacked positions. Call after drag-stop or reparent. */
+  relayout: () => void
+  /** Move a child to a new index within its container, or to a new container. */
+  reparentChild: (nodeId: string, newParentId: string, insertIndex: number) => void
   getFlowDefinition: () => FlowDefinition
 }
 
@@ -250,7 +312,7 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
       viewport = defaultFlow.viewport
     }
 
-    const orderedNodes = ensureParentBeforeChild(nodes)
+    const orderedNodes = stackChildren(ensureParentBeforeChild(nodes))
     set({
       facetId,
       ...withDerived({ nodes: orderedNodes, edges }, edges),
@@ -266,6 +328,23 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
   onNodesChange: (changes) => {
     const types = changes.map((c) => c.type)
     console.log('[store] onNodesChange', types.join(', '), `(${changes.length} changes)`)
+
+    // Guard: if all changes are deselections AND focus is inside a
+    // contentEditable element within the popup (i.e. ProseMirror editor),
+    // ignore. React Flow fires deselect-all when focus leaves its pane.
+    // We must NOT block intentional deselections from close buttons etc.
+    const allDeselects =
+      changes.length > 0 &&
+      changes.every((c) => c.type === 'select' && !c.selected)
+    if (allDeselects && typeof document !== 'undefined') {
+      const active = document.activeElement as HTMLElement | null
+      const inPopup = active?.closest?.('[data-node-config-popup]')
+      const isEditable = active?.isContentEditable || active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA'
+      if (inPopup && isEditable) {
+        console.log('[store] onNodesChange — ignoring deselect (editing in popup)')
+        return
+      }
+    }
 
     // Dimension-only changes: apply silently without recomputing derived state
     const meaningful = changes.filter((c) => c.type !== 'dimensions')
@@ -307,7 +386,7 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
 
   addNode: (node) => {
     set((state) => {
-      const nodes = resizeContainers(ensureParentBeforeChild([...state.nodes, node]))
+      const nodes = stackChildren(ensureParentBeforeChild([...state.nodes, node]))
       return { ...withDerived({ nodes }, state.edges), isDirty: true }
     }, false, 'addNode')
   },
@@ -331,10 +410,11 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
       for (const node of state.nodes) {
         if (node.parentId && idsToRemove.has(node.parentId)) idsToRemove.add(node.id)
       }
-      const nodes = state.nodes.filter((n) => !idsToRemove.has(n.id))
+      const remaining = state.nodes.filter((n) => !idsToRemove.has(n.id))
       const edges = state.edges.filter(
         (e) => !idsToRemove.has(e.source) && !idsToRemove.has(e.target),
       )
+      const nodes = stackChildren(remaining)
       return { ...withDerived({ nodes, edges }, edges), isDirty: true }
     }, false, 'removeNodes')
   },
@@ -356,7 +436,7 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
 
   setNodes: (nodes) => {
     set((state) => {
-      const ordered = resizeContainers(ensureParentBeforeChild(nodes))
+      const ordered = stackChildren(ensureParentBeforeChild(nodes))
       return { ...withDerived({ nodes: ordered }, state.edges), isDirty: true }
     }, false, 'setNodes')
   },
@@ -440,13 +520,61 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
     }))
 
     const deselected = nodes.map((n) => ({ ...n, selected: false }))
-    const allNodes = resizeContainers(ensureParentBeforeChild([...deselected, ...newNodes]))
+    const allNodes = stackChildren(ensureParentBeforeChild([...deselected, ...newNodes]))
     const allEdges = [...edges, ...newEdges]
     set({
       ...withDerived({ nodes: allNodes, edges: allEdges }, allEdges),
       isDirty: true,
     }, false, 'paste')
     return newNodes
+  },
+
+  detachNode: (nodeId, absolutePosition) => {
+    set((state) => {
+      // Remove parentId and set absolute position — don't re-stack yet
+      // (the node is being dragged, stacking happens on drop)
+      const nodes = state.nodes.map((n) =>
+        n.id === nodeId
+          ? { ...n, parentId: undefined, position: absolutePosition }
+          : n,
+      )
+      // Re-stack remaining siblings in the old container
+      return { nodes: stackChildren(ensureParentBeforeChild(nodes)) }
+    }, false, 'detachNode')
+  },
+
+  relayout: () => {
+    set((state) => {
+      const nodes = stackChildren(ensureParentBeforeChild(state.nodes))
+      return { ...withDerived({ nodes }, state.edges) }
+    }, false, 'relayout')
+  },
+
+  reparentChild: (nodeId, newParentId, insertIndex) => {
+    set((state) => {
+      // Remove from old parent's ordering (by changing parentId)
+      let nodes = state.nodes.map((n) => {
+        if (n.id !== nodeId) return n
+        return { ...n, parentId: newParentId }
+      })
+
+      // Collect new parent's children sorted by position, insert at index
+      const siblings = nodes
+        .filter((n) => n.parentId === newParentId && n.id !== nodeId)
+        .sort((a, b) => a.position.y - b.position.y)
+      siblings.splice(insertIndex, 0, nodes.find((n) => n.id === nodeId)!)
+
+      // Assign y positions to establish order before stackChildren
+      nodes = nodes.map((n) => {
+        if (n.parentId !== newParentId) return n
+        const idx = siblings.findIndex((s) => s.id === n.id)
+        if (idx === -1) return n
+        return { ...n, position: { x: STACK_PADDING_X, y: STACK_PADDING_TOP + idx * (CHILD_HEIGHT + STACK_GAP) } }
+      })
+
+      nodes = stackChildren(ensureParentBeforeChild(nodes))
+      return { ...withDerived({ nodes }, state.edges), isDirty: true }
+    }, false, 'reparentChild')
   },
 
   getFlowDefinition: () => {

@@ -17,13 +17,18 @@ Each button MUST have exactly one outgoing edge in the flow graph (enforced
 by dead path validation — see builder-canvas spec).
 
 ### Requirement: Canvas representation
-The card canvas node SHALL display:
-- A wider block compared to question nodes
-- A truncated preview of the markdownContent (first 80 chars)
-- A button count badge (e.g. "2 buttons")
-- One labeled output handle per button, on the right side of the canvas node,
-  labeled with the button's label text (truncated)
-- A red warning indicator per button handle that has no outgoing edge
+Card is a content-tier node and SHALL render in the same compact stacked
+row layout as other content-tier nodes (see builder-canvas spec: Stacked
+child layout). The card canvas node SHALL display:
+- A colored type icon badge (CreditCard icon, orange)
+- The card label (truncated to a single line)
+- A subtitle showing "Card · N btn(s)" where N is the button count
+- One output source handle per button, stacked vertically on the right
+  edge of the row. Each handle SHALL expose the button's label via a
+  `title` tooltip (not rendered as visible text, since the compact row
+  layout has no horizontal space for per-button labels).
+- Handles belonging to buttons with no outgoing edge SHALL be colored
+  red (vs. orange for connected buttons) as a dead-path indicator.
 
 ### Requirement: Side panel editor
 The card node config popup SHALL include:

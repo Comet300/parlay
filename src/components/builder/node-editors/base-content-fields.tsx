@@ -12,7 +12,6 @@ interface BaseContentFieldsProps {
 export function BaseContentFields({ nodeId, showRequired = false }: BaseContentFieldsProps) {
   const node = useBuilderStore((s) => s.nodes.find((n) => n.id === nodeId))
   const updateNodeData = useBuilderStore((s) => s.updateNodeData)
-  const nodes = useBuilderStore((s) => s.nodes)
   const allSlugs = useBuilderStore((s) => s.slugs)
   const [slugWarning, setSlugWarning] = useState<string | null>(null)
 
@@ -54,7 +53,7 @@ export function BaseContentFields({ nodeId, showRequired = false }: BaseContentF
           onChange={(v) => {
             // Check if old slug is referenced in any condition formulas
             if (slug && v !== slug) {
-              const affected = nodes.filter(
+              const affected = useBuilderStore.getState().nodes.filter(
                 (n) =>
                   n.id !== nodeId &&
                   'condition' in n.data &&

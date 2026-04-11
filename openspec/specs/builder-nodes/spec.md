@@ -211,28 +211,33 @@ fields. They are not content nodes and do not produce response data.
 ### Requirement: Milkdown Crepe editor integration
 All WYSIWYG markdown editors in the builder (Start, End, Card, Page
 headerContent, PageGroup headerContent) SHALL use the Milkdown Crepe
-editor (`@milkdown/crepe`) with the `@milkdown/react` integration
-(`useEditor` hook + `MilkdownProvider`):
+editor (`@milkdown/crepe`) instantiated directly (not via `useEditor`
+hook — Crepe manages its own lifecycle).
 
-```tsx
-import { Crepe } from '@milkdown/crepe';
-import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
+The Crepe editor SHALL be configured with these features:
+- `Crepe.Feature.ImageBlock`: true (image upload support)
+- `Crepe.Feature.Toolbar`: true (inline formatting toolbar on text selection)
+- `Crepe.Feature.TopBar`: true (fixed toolbar at top with heading selector,
+  bold, italic, code, link, strikethrough buttons)
+- `Crepe.Feature.BlockEdit`: true (drag handle for block reorder — the
+  add "+" button is hidden via CSS, since TopBar provides block creation)
 
-const CrepeEditor: React.FC<{ defaultValue: string }> = ({ defaultValue }) => {
-  const { get } = useEditor((root) => {
-    return new Crepe({ root, defaultValue, featureConfigs: { /* ... */ } });
-  });
-  return <Milkdown />;
-};
+Compact CSS overrides (`crepe-compact.css`) SHALL scale down the default
+Crepe theme for use inside the builder popup:
+- ProseMirror padding: 12px 16px 12px 36px (extra left for drag handle)
+- Headings: h1=20px, h2=17px, h3=15px, h4-h6=14px (down from 42/36/32/28)
+- Body text: 13px (down from 16px)
+- TopBar items: compact 28px sizing
 
-// Wrap in MilkdownProvider
-<MilkdownProvider>
-  <CrepeEditor defaultValue={existingMarkdown} />
-</MilkdownProvider>
-```
+TopBar buttons SHALL have `tabIndex=-1` and `.focus()` neutered to prevent
+them from stealing focus from the ProseMirror editor. A `focusin`
+interceptor on the TopBar SHALL redirect focus back to ProseMirror.
 
-Content retrieval in React uses `get()?.getMarkdown()` from the `useEditor`
-return value. Change detection for auto-save uses Crepe's event listener:
+A custom ProseMirror keymap plugin SHALL override Backspace on empty
+headings to convert directly to paragraph (bypassing Milkdown's default
+heading-level cycling behavior H3→H2→H1→paragraph).
+
+Change detection uses Crepe's event listener:
 `crepe.on((listener) => listener.markdownUpdated((ctx, markdown) => { ... }))`.
 
 The Crepe editor SHALL support image and file uploads:
@@ -241,19 +246,17 @@ The Crepe editor SHALL support image and file uploads:
   the path {facetId}/{randomId}.{ext}
 - The system SHALL replace the local blob/file reference in the markdown
   with the permanent public Supabase Storage URL
-- The upload handler SHALL be implemented in app/lib/milkdown/upload.ts
+- The upload handler SHALL be implemented in src/lib/milkdown/upload.ts
 
 The 'markdown-uploads' Supabase Storage bucket SHALL be created as public
 (public only means public download URLs — uploads and deletes still require
 policies). The following storage policies SHALL be created:
 
 ```sql
--- Allow authenticated users to upload files
 CREATE POLICY "Authenticated users can upload markdown assets"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'markdown-uploads');
 
--- Allow authenticated users to delete their uploaded files
 CREATE POLICY "Authenticated users can delete markdown assets"
   ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'markdown-uploads');
@@ -263,30 +266,7 @@ Files SHALL be organized by facet ID. When a facet is deleted (CASCADE),
 the application SHALL also delete the corresponding Storage folder
 (using the service role key — see facets spec).
 
-The Crepe editor SHALL be configured with the `ImageBlock` feature using
-the `onUpload` handler to integrate with Supabase Storage:
-
-```typescript
-import { Crepe } from "@milkdown/crepe";
-
-const crepe = new Crepe({
-  root,
-  defaultValue: existingMarkdown,
-  featureConfigs: {
-    [Crepe.Feature.ImageBlock]: {
-      onUpload: async (file: File) => {
-        // Upload to Supabase Storage markdown-uploads/{facetId}/{randomId}.{ext}
-        // Return the permanent public URL
-        return uploadToSupabaseStorage(file, facetId);
-      },
-    },
-  },
-});
-```
-
-Preview mode uses `crepe.setReadonly(true)`. The `@milkdown/react`
-integration handles Crepe lifecycle (`create()` / `destroy()`)
-automatically via the `useEditor` hook.
+Preview mode uses `crepe.setReadonly(true)`.
 
 ### Requirement: Start and End node editors
 Start and End SHALL open the Milkdown Crepe editor in the node config popup
@@ -297,14 +277,20 @@ renders the Start WYSIWYG screen followed by the End WYSIWYG screen.
 This is useful for simple announcements or consent-only flows.
 
 ### Requirement: Page and PageGroup canvas nodes
-Page nodes SHALL render as React Flow native subgraph containers with a
-visible border and label. All children are rendered inside the bordered area.
-PageGroup nodes SHALL additionally show maxQuestionsPerPage in the canvas node.
-Children SHALL be draggable in and out of containers on the canvas.
+Page nodes SHALL render as custom container node types (NOT the built-in
+`type: 'group'` which has no handles) with a visible border, label header,
+and explicit Handle components (1 target left, 1 source right).
+Children are rendered inside the container in a vertical stack (see
+builder-canvas spec: Stacked child layout). Container height auto-scales.
+PageGroup nodes SHALL additionally show maxQuestionsPerPage in the header.
+Children SHALL be draggable between containers via the detach-reparent
+pattern (see builder-canvas spec: Stacked child layout).
 
 ### Requirement: Group canvas node
 Group nodes SHALL render as a lighter bordered subgraph inside their parent
-Page or PageGroup. The shuffle toggle SHALL be visible in the node config popup editor.
+Page or PageGroup, using the same stacked child layout. Group has 0 handles
+(not connected by edges). The shuffle toggle SHALL be visible in the node
+config popup editor.
 
 ### Requirement: Scripted LLM node config popup
 The scripted_llm node config popup SHALL show a decision-tree script editor:

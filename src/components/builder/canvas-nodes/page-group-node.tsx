@@ -10,7 +10,7 @@ export const PageGroupCanvasNode = memo(function PageGroupCanvasNode({
   const d = data as PageGroupNodeData
   return (
     <div
-      className={`rounded-xl border-2 border-dashed bg-violet-50/50 min-w-[200px] min-h-[100px] ${
+      className={`rounded-xl border-2 border-dashed bg-violet-50/50 w-full h-full ${
         selected ? 'border-violet-500 shadow-md' : 'border-violet-300'
       }`}
     >
@@ -21,18 +21,15 @@ export const PageGroupCanvasNode = memo(function PageGroupCanvasNode({
       />
       <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200 bg-violet-100/50 rounded-t-[10px]">
         <Layers className="h-3.5 w-3.5 text-violet-600" />
-        <span className="text-xs font-semibold text-violet-700 truncate">
+        <span className="text-xs font-semibold text-violet-700 truncate flex-1">
           {d.label || 'Page Group'}
         </span>
-        <span className="text-[10px] text-violet-500 ml-auto">
-          {d.maxQuestionsPerPage}/page
+        <span className="text-[10px] text-violet-500">
+          {d.maxQuestionsPerPage}/pg
         </span>
         {d.condition && (
-          <span className="text-[10px] text-violet-500" title="Has condition">⚡</span>
+          <span className="text-[10px] text-violet-500" title="Has condition">&#x26A1;</span>
         )}
-      </div>
-      <div className="p-2 min-h-[60px]">
-        {/* Children render here via React Flow sub-flow */}
       </div>
       <Handle
         type="source"

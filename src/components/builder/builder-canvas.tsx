@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState } from 'react'
+import { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import {
   ReactFlow,
   Background,
@@ -9,10 +9,12 @@ import {
   type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { toast } from 'sonner'
 import { useShallow } from 'zustand/shallow'
 import { useBuilderStore } from '~/lib/stores/builder-store'
 import { getCanvasNodeTypes, NodeTypeRegistry } from '~/lib/node-registry'
 import { PAGE_TIER_TYPES, CONTENT_TIER_TYPES, ALLOWED_CHILDREN, CONTAINER_TYPES } from '~/lib/node-registry/types'
+import { CHILD_HEIGHT, CHILD_WIDTH, STACK_PADDING_X, STACK_PADDING_TOP, STACK_GAP } from '~/lib/stores/builder-store'
 import type { FlowNode, NodeTypeName } from '~/lib/node-registry/types'
 import { NodeConfigPopup } from './node-config-popup'
 import { AddNodePanel } from './add-node-panel'
@@ -26,21 +28,10 @@ interface BuilderCanvasProps {
   onToggleAddNode?: () => void
 }
 
-// Simple toast state — no external dependency
-let toastTimeout: ReturnType<typeof setTimeout> | undefined
-function showToast(msg: string) {
-  const el = document.getElementById('builder-toast')
-  if (el) {
-    el.textContent = msg
-    el.classList.remove('hidden')
-    clearTimeout(toastTimeout)
-    toastTimeout = setTimeout(() => el.classList.add('hidden'), 3000)
-  }
-}
 
 export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddNode }: BuilderCanvasProps) {
   console.log('[canvas] render')
-  const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, pushSnapshot, undo, redo, copyNodes, paste } = useBuilderStore(
+  const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, pushSnapshot, undo, redo, copyNodes, paste, relayout, reparentChild, detachNode } = useBuilderStore(
     useShallow((s) => ({
       nodes: s.nodes,
       edges: s.edges,
@@ -56,6 +47,9 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
       redo: s.redo,
       copyNodes: s.copyNodes,
       paste: s.paste,
+      relayout: s.relayout,
+      reparentChild: s.reparentChild,
+      detachNode: s.detachNode,
     })),
   )
   const { screenToFlowPosition, fitView } = useReactFlow()
@@ -63,6 +57,10 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
   const [confirmDelete, setConfirmDelete] = useState<{
     nodeIds: string[]
     childCount: number
+  } | null>(null)
+  const [dropPreview, setDropPreview] = useState<{
+    containerId: string
+    insertIndex: number
   } | null>(null)
 
   // Listen for dead-path highlight from toolbar
@@ -187,7 +185,7 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
         pushSnapshot()
         const result = paste()
         if (result === null) {
-          showToast('Copied nodes must include their parent container')
+          toast.error('Copied nodes must include their parent container')
         }
         return
       }
@@ -234,7 +232,7 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
       if ((sourceNode.type ?? sourceNode.data.type) === 'start') {
         const existing = edges.filter((e) => e.source === connection.source)
         if (existing.length >= 1) {
-          showToast('Start node can only have one outgoing edge')
+          toast.error('Start node can only have one outgoing edge')
           return
         }
       }
@@ -270,35 +268,52 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
       const descriptor = NodeTypeRegistry.get(nodeType)
       if (!descriptor) return
 
+      // Content-tier: must land on a valid container
       if (CONTENT_TIER_TYPES.has(nodeType)) {
         const container = findContainerAtPosition(nodes, position)
         if (!container) {
-          showToast('All nodes must be inside a Page or Page Group')
+          toast.error('Content nodes must be placed inside a Page or Page Group')
           return
         }
 
         const parentType = (container.type ?? container.data.type) as NodeTypeName
-        const allowed = ALLOWED_CHILDREN[parentType]
-        if (!allowed || !allowed.has(nodeType)) {
-          showToast(`Cannot place ${descriptor.label} inside ${parentType}`)
+
+        // LLM nodes cannot contain children
+        if (parentType === 'scripted_llm' || parentType === 'real_llm') {
+          toast.error('LLM nodes cannot contain child elements')
           return
         }
 
+        const allowed = ALLOWED_CHILDREN[parentType]
+        if (!allowed || !allowed.has(nodeType)) {
+          toast.error(`Cannot place ${descriptor.label} inside a ${parentType.replace('_', ' ')}`)
+          return
+        }
+
+        // Calculate insert index based on drop y-position within container
+        const relY = position.y - container.position.y
+        const siblings = nodes.filter((n) => n.parentId === container.id).sort((a, b) => a.position.y - b.position.y)
+        let insertIndex = siblings.length
+        for (let i = 0; i < siblings.length; i++) {
+          if (relY < siblings[i].position.y + 24) { // 24 = half child height
+            insertIndex = i
+            break
+          }
+        }
+
         pushSnapshot()
-        addNode({
+        const newNode: FlowNode = {
           id: crypto.randomUUID(),
           type: nodeType,
-          position: {
-            x: position.x - container.position.x,
-            y: position.y - container.position.y,
-          },
+          position: { x: 0, y: insertIndex * 56 }, // rough position, stackChildren will fix
           data: descriptor.defaultData(),
           parentId: container.id,
-          extent: 'parent',
-        })
+        }
+        addNode(newNode)
         return
       }
 
+      // Page-tier: place on canvas root
       pushSnapshot()
       addNode({
         id: crypto.randomUUID(),
@@ -310,54 +325,155 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
     [nodes, screenToFlowPosition, addNode, pushSnapshot],
   )
 
-  // Inter-container drag: reparent content nodes on drag stop
-  const onNodeDragStop = useCallback(
+  // Track original parent + position for cross-container drag and snap-back
+  const dragOriginRef = useRef<{
+    nodeId: string
+    parentId: string
+    position: { x: number; y: number }
+  } | null>(null)
+
+  // On drag start: if it's a child node, detach from parent so it can
+  // move freely across the canvas. Convert position to absolute coords.
+  const onNodeDragStart = useCallback(
     (_: React.MouseEvent, node: FlowNode) => {
-      if (!CONTENT_TIER_TYPES.has((node.type ?? node.data.type) as NodeTypeName)) return
+      const nodeType = (node.type ?? node.data.type) as NodeTypeName
+      if (!node.parentId || !CONTENT_TIER_TYPES.has(nodeType)) return
 
-      // Get the absolute position of the node
-      const absX = node.parentId
-        ? node.position.x + (nodes.find((n) => n.id === node.parentId)?.position.x ?? 0)
-        : node.position.x
-      const absY = node.parentId
-        ? node.position.y + (nodes.find((n) => n.id === node.parentId)?.position.y ?? 0)
-        : node.position.y
+      const parent = nodes.find((n) => n.id === node.parentId)
+      const absX = (parent?.position.x ?? 0) + node.position.x
+      const absY = (parent?.position.y ?? 0) + node.position.y
 
-      const newContainer = findContainerAtPosition(
-        nodes.filter((n) => n.id !== node.id && n.id !== node.parentId),
-        { x: absX, y: absY },
+      // Save origin for snap-back
+      dragOriginRef.current = {
+        nodeId: node.id,
+        parentId: node.parentId,
+        position: { ...node.position },
+      }
+
+      // Detach from parent, convert to absolute position
+      detachNode(node.id, { x: absX, y: absY })
+    },
+    [nodes, detachNode],
+  )
+
+  // During drag: compute where the skeleton preview should appear
+  const onNodeDrag = useCallback(
+    (_: React.MouseEvent, node: FlowNode) => {
+      if (!dragOriginRef.current) return // only for child node drags
+
+      const dropPos = node.position // absolute (detached)
+      const targetContainer = findContainerAtPosition(
+        nodes.filter((n) => n.id !== node.id),
+        dropPos,
       )
 
-      if (newContainer) {
-        // Validate nesting rules
-        const parentType = (newContainer.type ?? newContainer.data.type) as NodeTypeName
-        const allowed = ALLOWED_CHILDREN[parentType]
-        if (!allowed || !allowed.has((node.type ?? node.data.type) as NodeTypeName)) return
-
-        // Reparent
-        if (newContainer.id !== node.parentId) {
-          pushSnapshot()
-          const updatedNodes = nodes.map((n) => {
-            if (n.id !== node.id) return n
-            return {
-              ...n,
-              parentId: newContainer.id,
-              extent: 'parent' as const,
-              position: {
-                x: absX - newContainer.position.x,
-                y: absY - newContainer.position.y,
-              },
-            }
-          })
-          useBuilderStore.getState().setNodes(updatedNodes)
-        }
-      } else if (node.parentId) {
-        // Dragged outside all containers — snap back (keep current parent)
-        // React Flow's extent: 'parent' already handles this visually
+      if (!targetContainer || !CONTAINER_TYPES.has((targetContainer.type ?? targetContainer.data.type) as NodeTypeName)) {
+        setDropPreview(null)
+        return
       }
+
+      const targetType = (targetContainer.type ?? targetContainer.data.type) as NodeTypeName
+      if (targetType === 'scripted_llm' || targetType === 'real_llm') {
+        setDropPreview(null)
+        return
+      }
+
+      const relY = dropPos.y - targetContainer.position.y
+      const siblings = nodes
+        .filter((n) => n.parentId === targetContainer.id && n.id !== node.id)
+        .sort((a, b) => a.position.y - b.position.y)
+      let insertIndex = siblings.length
+      for (let i = 0; i < siblings.length; i++) {
+        if (relY < siblings[i].position.y + CHILD_HEIGHT / 2) {
+          insertIndex = i
+          break
+        }
+      }
+
+      setDropPreview({ containerId: targetContainer.id, insertIndex })
     },
-    [nodes, pushSnapshot],
+    [nodes],
   )
+
+  // On drag stop: reparent into target container or snap back to origin
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: FlowNode) => {
+      setDropPreview(null)
+      const origin = dragOriginRef.current
+      dragOriginRef.current = null
+
+      const nodeType = (node.type ?? node.data.type) as NodeTypeName
+
+      // Page-tier nodes (not children) — no stacking behavior
+      if (!origin) return
+
+      // node.position is now absolute (we detached in dragStart)
+      const dropPos = node.position
+
+      // Find which container the node was dropped on
+      const targetContainer = findContainerAtPosition(
+        nodes.filter((n) => n.id !== node.id),
+        dropPos,
+      )
+
+      if (!targetContainer) {
+        // Dropped outside any container
+        toast.error('Content nodes must be placed inside a Page or Page Group')
+        snapBack(origin)
+        return
+      }
+
+      const targetType = (targetContainer.type ?? targetContainer.data.type) as NodeTypeName
+
+      if (targetType === 'scripted_llm' || targetType === 'real_llm') {
+        toast.error('LLM nodes cannot contain child elements')
+        snapBack(origin)
+        return
+      }
+
+      const allowed = ALLOWED_CHILDREN[targetType]
+      if (!allowed || !allowed.has(nodeType)) {
+        toast.error(`Cannot place ${NodeTypeRegistry.get(nodeType)?.label ?? nodeType} inside a ${targetType.replace('_', ' ')}`)
+        snapBack(origin)
+        return
+      }
+
+      // Calculate insert index based on drop y relative to target container
+      const relY = dropPos.y - targetContainer.position.y
+      const targetSiblings = nodes
+        .filter((n) => n.parentId === targetContainer.id && n.id !== node.id)
+        .sort((a, b) => a.position.y - b.position.y)
+      let insertIndex = targetSiblings.length
+      for (let i = 0; i < targetSiblings.length; i++) {
+        if (relY < targetSiblings[i].position.y + CHILD_HEIGHT / 2) {
+          insertIndex = i
+          break
+        }
+      }
+
+      pushSnapshot()
+      reparentChild(node.id, targetContainer.id, insertIndex)
+    },
+    [nodes, pushSnapshot, reparentChild],
+  )
+
+  /** Snap a node back to its original parent at its original position */
+  function snapBack(origin: { nodeId: string; parentId: string; position: { x: number; y: number } }) {
+    // Re-insert at the position it came from (y determines order)
+    const store = useBuilderStore.getState()
+    const siblings = store.nodes
+      .filter((n) => n.parentId === origin.parentId && n.id !== origin.nodeId)
+      .sort((a, b) => a.position.y - b.position.y)
+    // Find the original index based on y position
+    let insertIndex = siblings.length
+    for (let i = 0; i < siblings.length; i++) {
+      if (origin.position.y <= siblings[i].position.y) {
+        insertIndex = i
+        break
+      }
+    }
+    reparentChild(origin.nodeId, origin.parentId, insertIndex)
+  }
 
   function handleConfirmDelete() {
     if (!confirmDelete) return
@@ -366,16 +482,68 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
     setConfirmDelete(null)
   }
 
+  // Inject skeleton preview node when dragging over a container
+  const displayNodes = useMemo(() => {
+    if (!dropPreview) return nodes
+
+    const { containerId, insertIndex } = dropPreview
+    const skeletonId = '__drop_preview__'
+    const skeletonY = STACK_PADDING_TOP + insertIndex * (CHILD_HEIGHT + STACK_GAP)
+
+    const skeleton: FlowNode = {
+      id: skeletonId,
+      type: 'drop_preview' as any,
+      position: { x: STACK_PADDING_X, y: skeletonY },
+      data: { type: 'drop_preview' } as any,
+      parentId: containerId,
+      selectable: false,
+      draggable: false,
+      style: { width: CHILD_WIDTH, height: CHILD_HEIGHT },
+    }
+
+    // Insert skeleton and shift siblings below it down
+    const result = nodes.map((n) => {
+      if (n.parentId !== containerId) return n
+      const siblings = nodes
+        .filter((s) => s.parentId === containerId)
+        .sort((a, b) => a.position.y - b.position.y)
+      const idx = siblings.indexOf(n)
+      if (idx >= insertIndex) {
+        // Shift down by one slot to make room for skeleton
+        return {
+          ...n,
+          position: {
+            x: STACK_PADDING_X,
+            y: STACK_PADDING_TOP + (idx + 1) * (CHILD_HEIGHT + STACK_GAP),
+          },
+        }
+      }
+      return n
+    })
+
+    // Also resize the container to fit the extra skeleton
+    const container = result.find((n) => n.id === containerId)
+    if (container) {
+      const childCount = result.filter((n) => n.parentId === containerId).length + 1
+      const neededH = STACK_PADDING_TOP + childCount * CHILD_HEIGHT + (childCount - 1) * STACK_GAP + 12
+      const idx = result.indexOf(container)
+      result[idx] = {
+        ...container,
+        style: { ...container.style, height: Math.max(neededH, (container.style?.height as number) ?? 0) },
+      }
+    }
+
+    // Add skeleton (after parent, before children for correct z-order)
+    const parentIdx = result.findIndex((n) => n.id === containerId)
+    result.splice(parentIdx + 1, 0, skeleton)
+    return result
+  }, [nodes, dropPreview])
+
   return (
     <div className="relative h-full w-full">
-      {/* Toast notification */}
-      <div
-        id="builder-toast"
-        className="hidden absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg pointer-events-none"
-      />
       <AddNodePanel open={!!addNodeOpen} onToggle={onToggleAddNode ?? (() => {})} />
       <ReactFlow
-        nodes={nodes}
+        nodes={displayNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
@@ -385,6 +553,8 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
         onMoveEnd={(_, viewport) => setViewport(viewport)}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         fitView
         fitViewOptions={{ padding: 0.2 }}

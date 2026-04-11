@@ -266,11 +266,14 @@ register({
 // ─── Exports ────────────────────────────────────────────────────────
 export const NodeTypeRegistry = registry
 
+import { DropPreviewNode } from '~/components/builder/canvas-nodes/drop-preview-node'
+
 /** Map of typeName → canvasComponent for React Flow's nodeTypes prop */
 export function getCanvasNodeTypes(): Record<string, React.ComponentType<any>> {
   const result: Record<string, React.ComponentType<any>> = {}
   registry.forEach((desc, key) => {
     result[key] = desc.canvasComponent
   })
+  result['drop_preview'] = DropPreviewNode as React.ComponentType<any>
   return result
 }

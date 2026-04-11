@@ -39,20 +39,51 @@ End screen. No warning is shown for this configuration.
 ### Requirement: Node containment constraint
 The system SHALL require all content-tier nodes (card, likert, single_choice,
 multi_choice, email_collection) and Group nodes to be children of a Page
-or PageGroup node via React Flow parentId. All child nodes SHALL have
-`extent: 'parent'` set to prevent them from being dragged outside their
-container's boundaries.
+or PageGroup node via React Flow parentId.
 LLM nodes (scripted_llm, real_llm) are page-tier and exist at the
 canvas root level — they are NOT placed inside containers.
-The system SHALL reject any attempt to place a content-tier node on the
-canvas root with a toast error: "All nodes must be inside a Page or Page Group."
+Toast notifications (via sonner) SHALL appear for invalid drops:
+- Canvas root: "Content nodes must be placed inside a Page or Page Group"
+- LLM node: "LLM nodes cannot contain child elements"
+- Invalid nesting: "Cannot place {type} inside a {container}"
+
+### Requirement: Stacked child layout (Scratch-style)
+Children inside Page, PageGroup, and Group containers SHALL NOT be
+freely positioned. They SHALL be laid out in a vertical top-to-bottom
+stack with fixed dimensions:
+- Fixed child width (176px) and height (48px)
+- 8px vertical gap between children
+- 44px top padding (container header area), 12px side and bottom padding
+- Container height auto-scales to fit all children — no scrolling
+
+Child order is determined by vertical position (topmost = first).
+Children are draggable for reorder: during drag, the node is detached
+from its parent (parentId removed, position converted to absolute) so
+it can move freely across the canvas. On drop:
+- If dropped on a valid container: the node is reparented at the
+  insertion index determined by the drop y-position
+- If dropped on an invalid target: a toast is shown and the node
+  snaps back to its original container and position
+
+During drag, a skeleton placeholder (dashed blue border, pulse
+animation) SHALL appear at the prospective insertion position inside
+the target container, and siblings below SHALL shift down to make room.
+
+Cross-container drag is supported: a child can be dragged from one
+Page to another Page/PageGroup/Group, subject to nesting rules.
 
 ### Requirement: Add Node panel behavior
-The system SHALL show page-tier node types (Page, PageGroup, Scripted LLM,
-Real LLM) as always-available in the Add Node panel.
-The system SHALL show content-tier node types (and Group) only when a Page,
-PageGroup, or Group node is currently selected or active on the canvas.
-This prevents content-tier nodes from being added to the canvas root.
+The system SHALL show all node types (page-tier and content-tier) as
+always-available and always-draggable in the Add Node panel. Selection
+state does NOT gate which nodes are draggable — it only controls
+whether the node config popup is shown.
+Drop validation is enforced on drop, not on drag:
+- Content-tier nodes dropped on canvas root SHALL be rejected with a
+  toast: "Content nodes must be placed inside a Page or Page Group"
+- Content-tier nodes dropped on LLM nodes SHALL be rejected with a
+  toast: "LLM nodes cannot contain child elements"
+- Content-tier nodes dropped on a valid container SHALL be accepted
+  and inserted into the container's stack at the drop position
 
 ### Requirement: Container nesting rules enforcement
 The system SHALL enforce the following parent -> allowed children:
@@ -60,7 +91,8 @@ The system SHALL enforce the following parent -> allowed children:
 - page_group: group, card, likert, single_choice, multi_choice, email_collection
 - group:      card, likert, single_choice, multi_choice, email_collection
               (NOT page, page_group, scripted_llm, real_llm, or other groups)
-The system SHALL reject invalid drops with a visible inline error indicator.
+The system SHALL reject invalid drops with a sonner toast error
+(see Node containment constraint requirement for the exact messages).
 
 ### Requirement: Start node edge constraint
 The system SHALL allow exactly one outgoing edge from the Start node.
@@ -110,10 +142,30 @@ conflict detection is implemented.
 
 ### Requirement: Node config popup
 When a node is selected on the canvas (single-click or tap), the system
-SHALL open a floating popup/modal showing the context-sensitive editor
-for that node. This popup pattern applies on BOTH desktop and mobile.
-The popup SHALL be dismissible (click outside, Escape key, or close button).
-Deselecting the node on the canvas SHALL also close the popup.
+SHALL center the canvas on the selected node (fitView with maxZoom: 1)
+and open a centered popup with a semi-transparent backdrop showing the
+context-sensitive editor for that node.
+
+On desktop, the popup SHALL start at 420px width and support a
+maximize/minimize toggle. Maximized mode expands to 680px width.
+Width and height animate smoothly on toggle (200ms ease).
+On mobile (<768px), the popup SHALL render as a bottom sheet.
+
+The popup SHALL be dismissible via: clicking the backdrop, Escape key,
+or the close button. Deselecting the node on the canvas SHALL also
+close the popup.
+
+Interactions inside the popup (typing in inputs, editing markdown
+content in Crepe editors, clicking action buttons) SHALL NOT close the
+popup. Specifically, the builder store's onNodesChange handler SHALL
+ignore deselect-all changes when the active element is an input,
+textarea, or contentEditable descendant of the popup. This prevents
+React Flow's focus-loss-triggered deselections from closing the popup
+while the user is editing its fields.
+
+The popup SHALL include a delete button (for all nodes except Start
+and End) in the header bar alongside the maximize/minimize and close
+buttons.
 
 ### Requirement: Form Settings access
 The builder toolbar SHALL include a "Form Settings" button that opens a
@@ -131,7 +183,7 @@ On mobile viewports (< 768px), the builder SHALL:
 - Move all non-canvas content (toolbar actions, Form Settings, facet
   switcher) into slide-over side menus accessible via toolbar icons,
   preventing collision between side panel scrolling and canvas pan/zoom
-- Open node config as a popup/modal (same as desktop)
+- Open node config as a bottom sheet (slides up from the bottom)
 - Show a compact toolbar at the top with essential actions only
   (back, form title, menu icon for additional actions)
 
@@ -153,19 +205,36 @@ The builder toolbar (top of the builder page) SHALL contain, in order:
     (with confirmation dialog) and navigates to /dashboard
 
 ### Requirement: Canvas node visual indicators
-Every canvas node (except Start/End) SHALL display:
-- Type badge (colored pill)
-- Label (2-line truncated)
-- Slug (muted small text) — only for nodes that have slugs
-- Funnel icon if a condition formula is set on the node
-- Database-off icon (muted) if record_response = false on the node
+Content-tier canvas nodes (stacked inside containers) SHALL display a
+compact row layout: type icon badge (colored square), truncated label,
+and type name subtitle. Likert, single_choice, multi_choice, and
+email_collection nodes SHALL additionally display inline icons for
+condition (funnel) and record_response=false (database-off). Card
+nodes omit the inline condition/record icons because the right edge
+of the row is reserved for button source handles (see builder-card-node
+spec). Group nodes display only their header bar (label + shuffle
+indicator), since children are rendered inside the group container.
+
+Page-tier nodes (Page, PageGroup, LLM) SHALL display a header bar with
+icon, label, and relevant metadata (e.g. maxQuestionsPerPage for
+PageGroup, provider/model/maxTurns for Real LLM, turn count for
+Scripted LLM).
+
+Start and End nodes SHALL display a plain-text preview (up to 50 chars)
+of their markdownContent with all markdown syntax stripped.
 
 #### Scenario: Content node dropped outside container
 - GIVEN the user drags a Likert node from the Add Node panel
 - WHEN they release it on the canvas root (outside any Page or PageGroup)
 - THEN the system rejects the drop
-- AND displays a toast: "All nodes must be inside a Page or Page Group"
+- AND displays a sonner toast: "Content nodes must be placed inside a Page or Page Group"
 - AND the node does not appear on the canvas
+
+#### Scenario: Content node dropped on LLM node
+- GIVEN the user drags a Likert node from the Add Node panel
+- WHEN they release it on a Real LLM node
+- THEN the system rejects the drop
+- AND displays a sonner toast: "LLM nodes cannot contain child elements"
 
 #### Scenario: LLM node added to canvas root
 - GIVEN the user drags a Real LLM node from the Add Node panel
@@ -176,8 +245,22 @@ Every canvas node (except Start/End) SHALL display:
 #### Scenario: Valid drop into container
 - GIVEN the user has a Page node on the canvas
 - WHEN they drag a Likert node and drop it inside the Page
-- THEN the Likert node appears as a child of the Page
-- AND the Page visually expands to contain it
+- THEN the Likert node appears in the Page's vertical stack
+- AND the Page auto-expands its height to fit the new child
+- AND a skeleton placeholder appears at the drop position during drag
+
+#### Scenario: Cross-container drag
+- GIVEN a Likert node is inside Page A
+- WHEN the user drags the Likert node and drops it inside Page B
+- THEN the Likert is removed from Page A's stack (A shrinks)
+- AND the Likert appears in Page B's stack at the drop position (B grows)
+- AND a skeleton placeholder showed the insertion point during drag
+
+#### Scenario: Cross-container drag to invalid target
+- GIVEN a Likert node is inside Page A
+- WHEN the user drags the Likert node and drops it on the canvas root
+- THEN the system shows a toast: "Content nodes must be placed inside a Page or Page Group"
+- AND the Likert snaps back to its original position in Page A
 
 #### Scenario: Auto-save after edit
 - GIVEN the user modifies a node label
@@ -223,6 +306,8 @@ Every canvas node (except Start/End) SHALL display:
 #### Scenario: Node config popup on desktop
 - GIVEN the user is on /build/:facetId at 1280px width
 - WHEN the user clicks a Likert node on the canvas
-- THEN a floating popup opens showing the Likert editor fields
-- WHEN the user clicks elsewhere on the canvas (deselects the node)
-- THEN the popup closes
+- THEN the canvas animates to center the selected node (fitView, maxZoom: 1)
+- AND a centered popup with a semi-transparent backdrop opens showing
+  the Likert editor fields
+- WHEN the user clicks the backdrop (outside the popup)
+- THEN the popup closes and the node is deselected

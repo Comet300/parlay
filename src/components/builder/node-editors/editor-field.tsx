@@ -3,13 +3,15 @@ import type { ReactNode } from 'react'
 export function EditorField({
   label,
   children,
+  className,
 }: {
   label: string
   children: ReactNode
+  className?: string
 }) {
   return (
-    <label className="block mb-3">
-      <span className="text-xs font-medium text-gray-600 mb-1 block">{label}</span>
+    <label className={`block mb-3 ${className ?? ''}`}>
+      <span className="text-xs font-medium text-gray-600 mb-1 block shrink-0">{label}</span>
       {children}
     </label>
   )
