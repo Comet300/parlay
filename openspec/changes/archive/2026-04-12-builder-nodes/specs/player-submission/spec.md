@@ -1,40 +1,4 @@
-# player-submission Specification
-
-## Purpose
-Define the submission flow triggered when a respondent reaches the End node,
-including submission record creation, response row insertion, and cleanup.
-## Requirements
-### Requirement: Submissions table schema
-The system SHALL persist submissions with the following Postgres schema:
-
-```sql
-CREATE TABLE submissions (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  form_id          uuid NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
-  facet_id         uuid NOT NULL REFERENCES facets(id) ON DELETE CASCADE,
-  facet_nickname   text NOT NULL,
-  visitor_id       text NOT NULL,
-  is_complete      boolean NOT NULL DEFAULT false,
-  submitted_at     timestamptz,
-  respondent_email text,
-  metadata         jsonb,
-  created_at       timestamptz DEFAULT now()
-);
-
-CREATE INDEX idx_submissions_form ON submissions(form_id);
-CREATE INDEX idx_submissions_visitor ON submissions(visitor_id, form_id);
-CREATE UNIQUE INDEX idx_submissions_once_per_visitor
-  ON submissions(visitor_id, facet_id) WHERE is_complete = true;
-```
-
-RLS: enabled with NO public INSERT policy. All writes (submission creation)
-are performed via the Supabase service role key in the /api/submit server
-route, which bypasses RLS entirely. This prevents respondents from directly
-inserting submissions and bypassing server-side rate limiting and validation.
-Owner SELECT via form_id -> forms.user_id for dashboard/export access.
-
-The partial unique index on (visitor_id, facet_id) WHERE is_complete = true
-enforces once-per-visitor at the database level.
+## MODIFIED Requirements
 
 ### Requirement: Responses table schema
 The system SHALL persist responses with the following Postgres schema:
@@ -80,16 +44,6 @@ forms.user_id` for dashboard and export access.
 - **WHEN** the submission is created
 - **THEN** a `responses` row SHALL exist with `node_alias` set to the node's internal React Flow id (UUID)
 - **AND** the row SHALL still be selectable by the form owner
-
-### Requirement: Submission rate limiting
-The submission endpoint SHALL enforce rate limiting to prevent spam:
-- Per IP address: max 10 submissions per 10 minutes
-
-Rate limit state SHALL be stored in the Supabase `rate_limit_log` table
-(shared with the LLM proxy — see player-llm spec for schema).
-Each submission attempt inserts a row with key = "submit:ip:{ip_address}".
-The rate check counts rows within the 10-minute window.
-Exceeding the limit SHALL return HTTP 429.
 
 ### Requirement: Submission API endpoint
 The system SHALL implement a POST endpoint at `/api/submit` as a
@@ -139,20 +93,6 @@ RLS policies — all writes go through the service role key).
 - **THEN** the endpoint SHALL insert one `submissions` row and two `responses` rows
 - **AND** the `node_alias` column on each response row SHALL match the alias from the request body
 
-### Requirement: Submission record
-When the respondent reaches the End node and clicks Continue (or the End
-node is rendered after the final page), the system SHALL insert a row into
-the submissions table with:
-- form_id: the resolved form ID
-- facet_id: the resolved facet ID
-- facet_nickname: snapshot of the facet nickname at submission time
-- visitor_id: the visitor_id determined during Phase 2
-- is_complete: true
-- submitted_at: now()
-- respondent_email: value from the email_collection node if answered
-  (first answered email_collection node if multiple exist in the flow)
-- metadata: { browser, locale, userAgent }
-
 ### Requirement: Response rows
 The system SHALL insert one `responses` row per response-bearing node
 in the facet's flow definition where the node was visited AND
@@ -184,11 +124,6 @@ Each row SHALL include:
 - **WHEN** the submission is created
 - **THEN** no `responses` row SHALL be inserted for `q-screening`
 - **AND** the value MAY still be available in `session.responses` for formula evaluation
-
-### Requirement: record_response = false handling
-Nodes with record_response = false SHALL have their responses tracked in
-the session (for formula evaluation) but SHALL NOT produce a responses row
-in Supabase. The CSV exporter uses this distinction (see csv-export spec).
 
 ### Requirement: LLM conversation storage formats
 The `/api/submit` endpoint SHALL read real_llm conversation data server-side from the `llm_conversations` table when `record_response = true`, querying by `(visitor_id, facet_id, node_alias)` and writing the `messages` jsonb field (excluding `system_context`) as the response value:
@@ -225,16 +160,6 @@ accepted.
 - **WHEN** the client submits the form
 - **THEN** the request body's `responses["intake-script"]` SHALL contain an array of `{ botMessage, selectedOption }` objects
 - **AND** the server SHALL persist that array as the response value
-
-### Requirement: Session cleanup
-After a successful submission (submissions row created and all responses
-rows inserted), the system SHALL remove parlay_session_{formId} from
-localStorage.
-
-### Requirement: End node rendering
-After submission, the system SHALL render the End node's markdownContent
-using Milkdown as the completion/thank-you screen.
-The Continue button SHALL be absent or disabled on the End node.
 
 ### Requirement: Once-per-visitor database enforcement
 The partial unique index on `submissions(visitor_id, facet_id) WHERE is_complete = true` SHALL prevent duplicate completed submissions at the database level. If the INSERT violates this constraint, the system SHALL catch the error gracefully and SHALL show the End node content (the respondent has already submitted).
@@ -276,4 +201,3 @@ The partial unique index on `submissions(visitor_id, facet_id) WHERE is_complete
 - **WHEN** the system attempts to insert another completed submission
 - **THEN** the partial unique index SHALL reject the INSERT
 - **AND** the system SHALL show the End node content gracefully
-

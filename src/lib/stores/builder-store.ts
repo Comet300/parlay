@@ -12,11 +12,12 @@ import type {
   FlowEdge,
   FlowDefinition,
   FlowNodeData,
-  SlugInfo,
+  AliasInfo,
   DeadPathInfo,
   NodeTypeName,
 } from '~/lib/node-registry/types'
 import { PAGE_TIER_TYPES, CONTENT_TIER_TYPES } from '~/lib/node-registry/types'
+import { ALIAS_TYPES } from '~/lib/node-registry/alias-utils'
 
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 }
 
@@ -117,18 +118,13 @@ function ensureParentBeforeChild(nodes: FlowNode[]): FlowNode[] {
 
 // ─── Derived state computation ─────────────────────────────────────────
 
-const SLUG_TYPES = new Set<NodeTypeName>([
-  'likert', 'single_choice', 'multi_choice', 'email_collection',
-  'card', 'scripted_llm', 'real_llm',
-])
-
-function computeSlugs(nodes: FlowNode[]): SlugInfo[] {
-  const result: SlugInfo[] = []
+function computeAliases(nodes: FlowNode[]): AliasInfo[] {
+  const result: AliasInfo[] = []
   for (const node of nodes) {
     const data = node.data
-    if (SLUG_TYPES.has(data.type) && 'slug' in data && typeof data.slug === 'string' && data.slug) {
+    if (ALIAS_TYPES.has(data.type) && 'alias' in data && typeof data.alias === 'string' && data.alias) {
       result.push({
-        slug: data.slug,
+        alias: data.alias,
         label: 'label' in data ? String(data.label) : '',
         type: data.type,
         nodeId: node.id,
@@ -136,6 +132,16 @@ function computeSlugs(nodes: FlowNode[]): SlugInfo[] {
     }
   }
   return result
+}
+
+function computeAnyPageHasProgressBar(nodes: FlowNode[]): boolean {
+  for (const node of nodes) {
+    const t = node.data.type
+    if ((t === 'page' || t === 'page_group') && 'show_progress_bar' in node.data && node.data.show_progress_bar === true) {
+      return true
+    }
+  }
+  return false
 }
 
 function computeDeadPaths(nodes: FlowNode[], edges: FlowEdge[]): DeadPathInfo[] {
@@ -167,23 +173,23 @@ function computeDeadPaths(nodes: FlowNode[], edges: FlowEdge[]): DeadPathInfo[] 
   return result
 }
 
-export interface SlugConflict {
-  slug: string
+export interface AliasConflict {
+  alias: string
   nodeIds: string[]
 }
 
-function computeSlugConflicts(nodes: FlowNode[]): SlugConflict[] {
-  const slugMap = new Map<string, string[]>()
+function computeAliasConflicts(nodes: FlowNode[]): AliasConflict[] {
+  const aliasMap = new Map<string, string[]>()
   for (const node of nodes) {
     const data = node.data
-    if (SLUG_TYPES.has(data.type) && 'slug' in data && typeof data.slug === 'string' && data.slug) {
-      if (!slugMap.has(data.slug)) slugMap.set(data.slug, [])
-      slugMap.get(data.slug)!.push(node.id)
+    if (ALIAS_TYPES.has(data.type) && 'alias' in data && typeof data.alias === 'string' && data.alias) {
+      if (!aliasMap.has(data.alias)) aliasMap.set(data.alias, [])
+      aliasMap.get(data.alias)!.push(node.id)
     }
   }
-  const conflicts: SlugConflict[] = []
-  slugMap.forEach((nodeIds, slug) => {
-    if (nodeIds.length > 1) conflicts.push({ slug, nodeIds })
+  const conflicts: AliasConflict[] = []
+  aliasMap.forEach((nodeIds, alias) => {
+    if (nodeIds.length > 1) conflicts.push({ alias, nodeIds })
   })
   return conflicts
 }
@@ -202,8 +208,8 @@ function stableArray<T>(prev: T[], next: T[], key?: keyof T): T[] {
 
 // Cache for derived state to avoid new references when content hasn't changed
 let prevDeadPaths: DeadPathInfo[] = []
-let prevSlugs: SlugInfo[] = []
-let prevSlugConflicts: SlugConflict[] = []
+let prevAliases: AliasInfo[] = []
+let prevAliasConflicts: AliasConflict[] = []
 
 /**
  * Recompute all derived state from nodes and edges.
@@ -213,17 +219,19 @@ let prevSlugConflicts: SlugConflict[] = []
 function withDerived(partial: { nodes: FlowNode[]; edges?: FlowEdge[] }, currentEdges: FlowEdge[]) {
   const edges = partial.edges ?? currentEdges
   const deadPaths = stableArray(prevDeadPaths, computeDeadPaths(partial.nodes, edges), 'nodeId')
-  const slugs = stableArray(prevSlugs, computeSlugs(partial.nodes), 'nodeId')
-  const slugConflicts = stableArray(prevSlugConflicts, computeSlugConflicts(partial.nodes), 'slug')
+  const aliases = stableArray(prevAliases, computeAliases(partial.nodes), 'nodeId')
+  const aliasConflicts = stableArray(prevAliasConflicts, computeAliasConflicts(partial.nodes), 'alias')
+  const anyPageHasProgressBar = computeAnyPageHasProgressBar(partial.nodes)
   prevDeadPaths = deadPaths
-  prevSlugs = slugs
-  prevSlugConflicts = slugConflicts
+  prevAliases = aliases
+  prevAliasConflicts = aliasConflicts
   return {
     ...partial,
     edges,
     deadPaths,
-    slugs,
-    slugConflicts,
+    aliases,
+    aliasConflicts,
+    anyPageHasProgressBar,
   }
 }
 
@@ -239,8 +247,9 @@ interface BuilderState {
 
   // Derived state (recomputed by withDerived on every nodes/edges mutation)
   deadPaths: DeadPathInfo[]
-  slugs: SlugInfo[]
-  slugConflicts: SlugConflict[]
+  aliases: AliasInfo[]
+  aliasConflicts: AliasConflict[]
+  anyPageHasProgressBar: boolean
 
   // Undo/redo
   undoStack: { nodes: FlowNode[]; edges: FlowEdge[] }[]
@@ -284,8 +293,9 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
   colorScheme: null,
   isDirty: false,
   deadPaths: [],
-  slugs: [],
-  slugConflicts: [],
+  aliases: [],
+  aliasConflicts: [],
+  anyPageHasProgressBar: false,
   undoStack: [],
   redoStack: [],
   clipboard: null,

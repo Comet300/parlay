@@ -56,9 +56,9 @@ Adjust any implementation detail that conflicts with current APIs before writing
   real_llm) exist at the canvas root and are connected by edges. Content-tier
   nodes (card, likert, single_choice, multi_choice, email_collection, group)
   are children of Page/PageGroup containers and do NOT have their own edges.
-- **Container nodes have no slugs**: Page, PageGroup, and Group are virtual
+- **Container nodes have no aliases**: Page, PageGroup, and Group are virtual
   containers that don't produce response data. Only content nodes and LLM
-  nodes have slugs. Slugs are internal identifiers for formula conditions,
+  nodes have aliases. Aliases are internal identifiers for formula conditions,
   not visible to respondents.
 - **Server-side LLM orchestration**: The server acts as middle-man between
   client and LLM. It pre-warms conversations with the system prompt (getting

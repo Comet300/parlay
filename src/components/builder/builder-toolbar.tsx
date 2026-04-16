@@ -7,6 +7,7 @@ import { updateFacetStatus } from '~/lib/server/facets'
 import { useBuilderStore } from '~/lib/stores/builder-store'
 import { useNavigate } from '@tanstack/react-router'
 import { useMediaQuery } from '~/lib/hooks/use-media-query'
+import { isValidAlias } from '~/lib/node-registry/alias-utils'
 
 interface BuilderToolbarProps {
   facetId: string
@@ -52,7 +53,8 @@ export function BuilderToolbar({
   const isMobile = useMediaQuery('(max-width: 767px)')
   const isDirty = useBuilderStore((s) => s.isDirty)
   const deadPaths = useBuilderStore((s) => s.deadPaths)
-  const slugConflicts = useBuilderStore((s) => s.slugConflicts)
+  const aliasConflicts = useBuilderStore((s) => s.aliasConflicts)
+  const aliases = useBuilderStore((s) => s.aliases)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const menuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -68,13 +70,17 @@ export function BuilderToolbar({
   }, [title, formTitle, formId, onRefresh])
 
   async function handlePublish() {
-    // Client-side pre-validation
+    // Client-side pre-validation — matches server `validateForPublish` checks.
     const blockers: string[] = []
     if (deadPaths.length > 0) {
       blockers.push(`${deadPaths.length} dead path${deadPaths.length > 1 ? 's' : ''}`)
     }
-    if (slugConflicts.length > 0) {
-      blockers.push(`${slugConflicts.length} slug conflict${slugConflicts.length > 1 ? 's' : ''}`)
+    if (aliasConflicts.length > 0) {
+      blockers.push(`${aliasConflicts.length} alias conflict${aliasConflicts.length > 1 ? 's' : ''}`)
+    }
+    const invalidAliases = aliases.filter((a) => !isValidAlias(a.alias))
+    if (invalidAliases.length > 0) {
+      blockers.push(`${invalidAliases.length} invalid alias${invalidAliases.length === 1 ? '' : 'es'}`)
     }
     if (blockers.length > 0) {
       setPublishError(`Cannot publish: ${blockers.join(', ')}`)

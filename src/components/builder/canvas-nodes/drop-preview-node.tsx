@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import { type NodeProps } from '@xyflow/react'
 
 export const DropPreviewNode = memo(function DropPreviewNode() {
   return (

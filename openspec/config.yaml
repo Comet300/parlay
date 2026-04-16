@@ -18,8 +18,9 @@ context: |
   Node tiers: page-tier (Start, End, Page, PageGroup, LLM nodes) have edges;
     content-tier (card, likert, single_choice, multi_choice, email_collection, group)
     are children of Page/PageGroup with no edges of their own
-  Container nodes (Page, PageGroup, Group) have no slugs — only content/LLM nodes do
-  Nickname/slug pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ (1-60 chars)
+  Container nodes (Page, PageGroup, Group) have no aliases — only content/LLM nodes do
+  Facet nickname (URL slug) pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ (1-60 chars)
+  Node alias pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/ (1-60 chars) — distinct concept from the URL slug, shares the regex
   Concurrent editing: last write wins
   Progress bar: checkpoint-based, opt-in per Page/PageGroup
   Once-per-visitor: enforced via partial unique index on submissions

@@ -29,9 +29,9 @@ interface BuilderCanvasProps {
 }
 
 
-export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddNode }: BuilderCanvasProps) {
+export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: BuilderCanvasProps) {
   console.log('[canvas] render')
-  const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, pushSnapshot, undo, redo, copyNodes, paste, relayout, reparentChild, detachNode } = useBuilderStore(
+  const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, pushSnapshot, undo, redo, copyNodes, paste, reparentChild, detachNode } = useBuilderStore(
     useShallow((s) => ({
       nodes: s.nodes,
       edges: s.edges,
@@ -47,7 +47,6 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
       redo: s.redo,
       copyNodes: s.copyNodes,
       paste: s.paste,
-      relayout: s.relayout,
       reparentChild: s.reparentChild,
       detachNode: s.detachNode,
     })),
@@ -573,7 +572,7 @@ export function BuilderCanvas({ facetId, settingsOpen, addNodeOpen, onToggleAddN
           maskColor="rgb(0,0,0,0.05)"
         />
       </ReactFlow>
-      <NodeConfigPopup settingsOpen={settingsOpen} />
+      <NodeConfigPopup />
 
       {/* Delete confirmation dialog */}
       {confirmDelete && (

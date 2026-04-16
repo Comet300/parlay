@@ -8,15 +8,15 @@ interface ConditionInputProps {
 }
 
 export function ConditionInput({ value, onChange, placeholder }: ConditionInputProps) {
-  const allSlugs = useBuilderStore((s) => s.slugs)
+  const allAliases = useBuilderStore((s) => s.aliases)
   const [showDropdown, setShowDropdown] = useState(false)
   const [filter, setFilter] = useState('')
   const [cursorPos, setCursorPos] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = filter
-    ? allSlugs.filter((s) => s.slug.startsWith(filter))
-    : allSlugs
+    ? allAliases.filter((s) => s.alias.startsWith(filter))
+    : allAliases
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value
@@ -35,12 +35,12 @@ export function ConditionInput({ value, onChange, placeholder }: ConditionInputP
     }
   }
 
-  function insertSlug(slug: string) {
+  function insertAlias(alias: string) {
     const before = value.slice(0, cursorPos)
     const wordMatch = before.match(/([a-z0-9-]+)$/)
     const prefixLen = wordMatch ? wordMatch[1].length : 0
     const newValue =
-      value.slice(0, cursorPos - prefixLen) + slug + value.slice(cursorPos)
+      value.slice(0, cursorPos - prefixLen) + alias + value.slice(cursorPos)
     onChange(newValue)
     setShowDropdown(false)
     inputRef.current?.focus()
@@ -58,7 +58,7 @@ export function ConditionInput({ value, onChange, placeholder }: ConditionInputP
           const pos = e.target.selectionStart ?? value.length
           const before = value.slice(0, pos)
           const wordMatch = before.match(/([a-z0-9-]+)$/)
-          if (wordMatch && allSlugs.length > 0) {
+          if (wordMatch && allAliases.length > 0) {
             setFilter(wordMatch[1])
             setShowDropdown(true)
           }
@@ -73,11 +73,11 @@ export function ConditionInput({ value, onChange, placeholder }: ConditionInputP
               key={s.nodeId}
               onMouseDown={(e) => {
                 e.preventDefault()
-                insertSlug(s.slug)
+                insertAlias(s.alias)
               }}
               className="flex items-center gap-2 w-full px-2.5 py-1.5 text-left text-sm hover:bg-blue-50"
             >
-              <code className="text-xs text-blue-600 font-mono">{s.slug}</code>
+              <code className="text-xs text-blue-600 font-mono">{s.alias}</code>
               <span className="text-xs text-gray-400 truncate">{s.label}</span>
               <span className="ml-auto text-[10px] text-gray-300">{s.type}</span>
             </button>

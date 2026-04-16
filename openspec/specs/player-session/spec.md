@@ -4,9 +4,7 @@
 Define respondent session persistence in localStorage for resume support,
 shuffle seed stability, and in-progress response tracking within the
 single-page form player.
-
 ## Requirements
-
 ### Requirement: Session storage key and structure
 The system SHALL store respondent session in localStorage under the key
 parlay_session_{formId} with the following structure:
@@ -56,13 +54,44 @@ prompting. This covers the case where a facet was archived and the visitor
 is resolved to a different facet on their next visit.
 
 ### Requirement: Always-tracked responses
-The system SHALL store all content node responses in session.responses
-regardless of the node's record_response flag.
-The record_response flag controls only whether the value is written to
-Supabase (see player-submission spec) — not whether it is tracked in the
-session (it is always tracked for formula condition evaluation).
-Only content nodes with slugs produce response values — container nodes
-(Page, PageGroup, Group) do not.
+The system SHALL store all response-bearing node responses in
+`session.responses` regardless of the node's `record_response` flag.
+The `record_response` flag SHALL control only whether the value is
+written to Supabase (see player-submission spec) — not whether it is
+tracked in the session, which it MUST be at all times for formula
+condition evaluation.
+
+Only response-bearing nodes with a non-empty `alias` SHALL produce
+keyed entries in `session.responses` accessible to formulas. Container
+nodes (Page, PageGroup, Group) and anchor nodes (Start, End) MUST NOT
+produce response values.
+
+A response-bearing node whose `alias` is empty MAY still be tracked
+internally (so the player can render its value back to the user during
+review), but it MUST NOT appear under any alias key in the formula
+evaluation context.
+
+#### Scenario: Likert response is tracked under its alias
+- **GIVEN** a Likert node with `alias: "q-mood"` and `record_response: false`
+- **WHEN** the respondent selects value 5
+- **THEN** `session.responses["q-mood"]` SHALL equal 5
+- **AND** subsequent formula evaluations SHALL see the value
+
+#### Scenario: Empty-alias node is not formula-addressable
+- **GIVEN** a Likert node with `alias: ""` and `record_response: true`
+- **WHEN** the respondent answers it
+- **THEN** the value MAY still be persisted to Supabase at submission time
+- **AND** the formula evaluation context MUST NOT contain an entry for this node keyed by an empty string
+
+#### Scenario: Scripted LLM mid-conversation session state
+- **GIVEN** a scripted_llm node with `alias: "chat-intake"`
+- **AND** the respondent has completed 2 turns
+- **WHEN** `session.responses` is inspected
+- **THEN** `session.responses["chat-intake"]` SHALL contain:
+  ```
+  [{"botMessage":"Welcome!","selectedOption":"Tell me more"},
+   {"botMessage":"Sure!","selectedOption":"Technology"}]
+  ```
 
 ### Requirement: LLM conversation in-session response format
 For real_llm nodes, the session response value SHALL be the full
@@ -83,39 +112,31 @@ conversation is available in session.responses for formula evaluation
 by other nodes.
 
 ### Requirement: Session clearing on completion
-The system SHALL remove the parlay_session_{formId} key from localStorage
-after a successful submission (all responses written to Supabase and the
-submission row is marked is_complete = true).
+The system SHALL remove the `parlay_session_{formId}` key from
+localStorage after a successful submission (all responses written to
+Supabase and the submission row marked `is_complete = true`).
 
 #### Scenario: Resume after browser close
-- WHEN a respondent with an existing session returns to /:formId
-- THEN Phase 2 resolves to the same facet via fingerprint
-- THEN the system finds the localStorage session with matching facetNickname
-- THEN offers "Resume where you left off" vs "Start fresh"
+- **WHEN** a respondent with an existing session returns to `/:formId`
+- **THEN** Phase 2 SHALL resolve to the same facet via fingerprint
+- **AND** the system SHALL find the localStorage session with matching `facetNickname`
+- **AND** SHALL offer "Resume where you left off" vs "Start fresh"
 
 #### Scenario: Facet mismatch discards session
-- WHEN a session exists with facetNickname = "horizon"
-- THEN but the visitor is now resolved to facet "compass"
-- THEN the system discards the "horizon" session without prompting
-- THEN starts fresh with facet "compass"
+- **WHEN** a session exists with `facetNickname = "horizon"`
+- **AND** the visitor is now resolved to facet `"compass"`
+- **THEN** the system SHALL discard the `"horizon"` session without prompting
+- **AND** SHALL start fresh with facet `"compass"`
 
 #### Scenario: Shuffle stability on resume
-- GIVEN a respondent was on a page with a shuffled multi-choice question
-- AND the shuffle seed "nodeId_123" = 42 is stored in the session
-- WHEN the respondent resumes the session
-- THEN the multi-choice options appear in the same shuffled order as before
+- **GIVEN** a respondent was on a page with a shuffled multi-choice question
+- **AND** the shuffle seed `"nodeId_123" = 42` is stored in the session
+- **WHEN** the respondent resumes the session
+- **THEN** the multi-choice options SHALL appear in the same shuffled order as before
 
 #### Scenario: Session creation timing
-- GIVEN a respondent has completed Phase 2 and clicked Continue on the Start screen
-- WHEN the first page-tier node is about to render
-- THEN the system creates the RespondentSession with empty responses,
-  empty visitedPageIds, and pre-generated shuffleSeeds
-- AND stores it in localStorage under parlay_session_{formId}
+- **GIVEN** a respondent has completed Phase 2 and clicked Continue on the Start screen
+- **WHEN** the first page-tier node is about to render
+- **THEN** the system SHALL create the `RespondentSession` with empty `responses`, empty `visitedPageIds`, and pre-generated `shuffleSeeds`
+- **AND** SHALL store it in localStorage under `parlay_session_{formId}`
 
-#### Scenario: Scripted LLM mid-conversation session state
-- GIVEN a scripted_llm node with slug "chat-intake"
-- AND the respondent has completed 2 turns
-- WHEN the session.responses is inspected
-- THEN "chat-intake" contains:
-  [{"botMessage":"Welcome!","selectedOption":"Tell me more"},
-   {"botMessage":"Sure!","selectedOption":"Technology"}]

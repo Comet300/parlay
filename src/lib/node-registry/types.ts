@@ -101,7 +101,7 @@ export interface GroupNodeData extends NodeDataBase {
 export interface LikertNodeData extends NodeDataBase {
   type: 'likert'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   required: boolean
@@ -114,7 +114,7 @@ export interface LikertNodeData extends NodeDataBase {
 export interface SingleChoiceNodeData extends NodeDataBase {
   type: 'single_choice'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   required: boolean
@@ -125,7 +125,7 @@ export interface SingleChoiceNodeData extends NodeDataBase {
 export interface MultiChoiceNodeData extends NodeDataBase {
   type: 'multi_choice'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   required: boolean
@@ -136,7 +136,7 @@ export interface MultiChoiceNodeData extends NodeDataBase {
 export interface EmailCollectionNodeData extends NodeDataBase {
   type: 'email_collection'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   required: boolean
@@ -145,7 +145,7 @@ export interface EmailCollectionNodeData extends NodeDataBase {
 export interface CardNodeData extends NodeDataBase {
   type: 'card'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   markdownContent: string
@@ -165,7 +165,7 @@ export interface ScriptedLLMTurn {
 export interface ScriptedLLMNodeData extends NodeDataBase {
   type: 'scripted_llm'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   script: ScriptedLLMTurn[]
@@ -175,7 +175,7 @@ export interface ScriptedLLMNodeData extends NodeDataBase {
 export interface RealLLMNodeData extends NodeDataBase {
   type: 'real_llm'
   label: string
-  slug: string
+  alias: string
   condition: string
   record_response: boolean
   provider: string
@@ -229,9 +229,9 @@ export interface NodeTypeDescriptor {
   allowedChildren?: NodeTypeName[]
 }
 
-// ─── Slug info returned by getAllSlugs() ────────────────────────────
-export interface SlugInfo {
-  slug: string
+// ─── Alias info returned by the store's derived aliases selector ───
+export interface AliasInfo {
+  alias: string
   label: string
   type: NodeTypeName
   nodeId: string

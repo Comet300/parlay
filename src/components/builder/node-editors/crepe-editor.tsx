@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Crepe } from '@milkdown/crepe'
 import { $prose } from '@milkdown/kit/utils'
-import { Plugin } from '@milkdown/kit/prose/state'
 import { keymap } from '@milkdown/kit/prose/keymap'
 import { setBlockType } from '@milkdown/kit/prose/commands'
 import { useBuilderStore } from '~/lib/stores/builder-store'
@@ -178,7 +177,6 @@ export function CrepeEditorField({ value, onChange, placeholder }: CrepeEditorPr
       })
     }
     // Only create/destroy on mount/unmount — value updates handled by editor
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleUpload])
 
   return (

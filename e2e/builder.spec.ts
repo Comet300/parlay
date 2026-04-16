@@ -22,9 +22,10 @@ function titleInput(page: import('@playwright/test').Page) {
  * Uses .last() to handle TanStack Router keeping old pages in the DOM.
  */
 async function openSwitcher(page: import('@playwright/test').Page) {
-  // font-medium + border + SVG uniquely identifies the switcher trigger
-  // (the primary Button component doesn't have `border` class)
-  const trigger = page.locator('button.font-medium.border').filter({ has: page.locator('svg') }).last()
+  // The facet switcher trigger is the button containing the ChevronDown icon.
+  // Other toolbar buttons (Add Node, dead-path badge) also match font-medium.border,
+  // so we disambiguate by looking for the chevron SVG's polyline path.
+  const trigger = page.locator('button.font-medium.border').filter({ has: page.locator('.lucide-chevron-down') })
   const dropdown = page.getByText('Create facet')
 
   // If already open, just ensure it's ready

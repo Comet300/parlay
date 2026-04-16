@@ -3,6 +3,8 @@ import { getRequest } from '@tanstack/react-start/server'
 import { auth } from '~/lib/auth/server'
 import { createAuthenticatedSupabaseClient } from '~/lib/supabase/authenticated-client'
 import { supabaseAdmin } from '~/lib/supabase/server'
+import { isValidAlias, ALIAS_TYPES } from '~/lib/node-registry/alias-utils'
+import type { NodeTypeName } from '~/lib/node-registry/types'
 
 const NICKNAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -287,7 +289,7 @@ async function validateForPublish(
   const fd = flowDef as { nodes?: unknown[]; edges?: unknown[] }
   const nodes = (fd.nodes ?? []) as Array<{
     id: string
-    data: { type: string; slug?: string; buttons?: { id: string }[]; provider?: string; label?: string }
+    data: { type: NodeTypeName; alias?: string; buttons?: { id: string }[]; provider?: string; label?: string }
   }>
   const edges = (fd.edges ?? []) as Array<{ source: string; sourceHandle?: string }>
 
@@ -316,17 +318,28 @@ async function validateForPublish(
     }
   }
 
-  // Slug uniqueness check
-  const slugMap = new Map<string, string[]>()
+  // Alias uniqueness check (empty alias is allowed)
+  const aliasMap = new Map<string, string[]>()
   for (const node of nodes) {
-    if (node.data.slug) {
-      if (!slugMap.has(node.data.slug)) slugMap.set(node.data.slug, [])
-      slugMap.get(node.data.slug)!.push(node.id)
+    if (!ALIAS_TYPES.has(node.data.type)) continue
+    const alias = node.data.alias
+    if (alias) {
+      if (!aliasMap.has(alias)) aliasMap.set(alias, [])
+      aliasMap.get(alias)!.push(node.id)
     }
   }
-  slugMap.forEach((nodeIds, slug) => {
-    if (nodeIds.length > 1) errors.push(`Duplicate slug "${slug}"`)
+  aliasMap.forEach((nodeIds, alias) => {
+    if (nodeIds.length > 1) errors.push(`Duplicate alias "${alias}"`)
   })
+
+  // Alias pattern-invalid check (empty alias is allowed; non-empty must match ALIAS_PATTERN)
+  for (const node of nodes) {
+    if (!ALIAS_TYPES.has(node.data.type)) continue
+    const alias = node.data.alias
+    if (alias && !isValidAlias(alias)) {
+      errors.push(`Node "${node.data.label ?? node.id}" has invalid alias "${alias}"`)
+    }
+  }
 
   // LLM provider check
   const llmNodes = nodes.filter((n) => n.data.type === 'real_llm' && n.data.provider)

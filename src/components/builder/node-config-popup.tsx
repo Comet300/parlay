@@ -6,11 +6,7 @@ import { NodeTypeRegistry } from '~/lib/node-registry'
 import { useMediaQuery } from '~/lib/hooks/use-media-query'
 import type { NodeTypeName } from '~/lib/node-registry/types'
 
-interface NodeConfigPopupProps {
-  settingsOpen?: boolean
-}
-
-export function NodeConfigPopup({ settingsOpen }: NodeConfigPopupProps) {
+export function NodeConfigPopup() {
   const selectedNodeId = useBuilderStore((s) => s.nodes.find((n) => n.selected)?.id ?? null)
   const selectedNodeType = useBuilderStore((s) => {
     const n = s.nodes.find((n) => n.selected)

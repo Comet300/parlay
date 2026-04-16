@@ -1,9 +1,13 @@
-# builder-formula Specification
+## RENAMED Requirements
 
-## Purpose
-Define the formula language for conditional node visibility expressions,
-the recursive descent parser, evaluator, and alias autocomplete behavior.
-## Requirements
+- FROM: `### Requirement: Slug autocomplete in the builder`
+- TO: `### Requirement: Alias autocomplete in the builder`
+
+- FROM: `### Requirement: Zustand store slug source`
+- TO: `### Requirement: Zustand store alias source`
+
+## MODIFIED Requirements
+
 ### Requirement: Formula language grammar
 The system SHALL implement an Excel-like boolean formula language for
 the "Show if" condition field on all nodes except Start and End. The
@@ -172,4 +176,3 @@ re-renders.
 - **GIVEN** two response-bearing nodes both have `alias: "q-age"`
 - **WHEN** a consumer reads `useBuilderStore((s) => s.aliasConflicts)`
 - **THEN** the returned array SHALL contain one `{ alias: "q-age", nodeIds: [...] }` entry with `nodeIds.length === 2`
-

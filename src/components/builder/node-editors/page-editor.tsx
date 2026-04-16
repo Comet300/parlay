@@ -6,6 +6,7 @@ import { CrepeEditorField } from './crepe-editor'
 export function PageEditor({ nodeId }: { nodeId: string }) {
   const node = useBuilderStore((s) => s.nodes.find((n) => n.id === nodeId))
   const updateNodeData = useBuilderStore((s) => s.updateNodeData)
+  const anyPageHasProgressBar = useBuilderStore((s) => s.anyPageHasProgressBar)
 
   if (!node || node.data.type !== 'page') return null
   const d = node.data
@@ -36,7 +37,7 @@ export function PageEditor({ nodeId }: { nodeId: string }) {
         checked={d.show_progress_bar}
         onChange={(v) => updateNodeData(nodeId, { show_progress_bar: v } as any)}
       />
-      {d.show_progress_bar && (
+      {anyPageHasProgressBar && (
         <EditorCheckbox
           label="Is checkpoint"
           checked={d.is_checkpoint}

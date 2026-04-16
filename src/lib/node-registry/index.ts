@@ -120,7 +120,7 @@ register({
   defaultData: () => ({
     type: 'likert',
     label: 'New Likert',
-    slug: '',
+    alias: '',
     condition: '',
     record_response: true,
     required: true,
@@ -141,7 +141,7 @@ register({
   defaultData: () => ({
     type: 'single_choice',
     label: 'New Single Choice',
-    slug: '',
+    alias: '',
     condition: '',
     record_response: true,
     required: true,
@@ -163,7 +163,7 @@ register({
   defaultData: () => ({
     type: 'multi_choice',
     label: 'New Multi Choice',
-    slug: '',
+    alias: '',
     condition: '',
     record_response: true,
     required: true,
@@ -185,7 +185,7 @@ register({
   defaultData: () => ({
     type: 'email_collection',
     label: 'Enter your email address',
-    slug: '',
+    alias: '',
     condition: '',
     record_response: true,
     required: true,
@@ -202,7 +202,7 @@ register({
   defaultData: () => ({
     type: 'card',
     label: 'New Card',
-    slug: '',
+    alias: '',
     condition: '',
     record_response: true,
     markdownContent: '',
@@ -223,7 +223,7 @@ register({
     return {
       type: 'scripted_llm',
       label: 'New Scripted LLM',
-      slug: '',
+      alias: '',
       condition: '',
       record_response: true,
       startTurnId: turnId,
@@ -250,7 +250,7 @@ register({
   defaultData: () => ({
     type: 'real_llm',
     label: 'New Real LLM',
-    slug: '',
+    alias: '',
     condition: '',
     record_response: true,
     provider: '',

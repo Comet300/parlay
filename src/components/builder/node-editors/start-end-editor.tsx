@@ -31,7 +31,7 @@ export function StartEndEditor({ nodeId }: { nodeId: string }) {
         markdownContent: isStart ? DEFAULT_START_CONTENT : DEFAULT_END_CONTENT,
       } as any)
     }
-  }, [nodeId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nodeId])
 
   return (
     <div className="p-3 flex flex-col h-full">

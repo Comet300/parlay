@@ -3,9 +3,7 @@
 ## Purpose
 Manage Facets — concrete, independently editable versions of a Form,
 each with its own flow definition, color scheme, and lifecycle status.
-
 ## Requirements
-
 ### Requirement: Facet schema
 The system SHALL persist facets with the following Postgres schema:
 - id: uuid pk default gen_random_uuid()
@@ -89,8 +87,9 @@ CREATE TRIGGER trg_facet_updated_at
 This also triggers the form-level updated_at propagation (see forms spec).
 
 ### Requirement: flow_definition structure
-The flow_definition jsonb field SHALL store the serialized React Flow state
-using the structure returned by `reactFlowInstance.toObject()`:
+The `flow_definition` jsonb field SHALL store the serialized React
+Flow state using the structure returned by
+`reactFlowInstance.toObject()`:
 
 ```typescript
 interface FlowDefinition {
@@ -109,20 +108,41 @@ interface FlowDefinition {
 }
 ```
 
-Each node in the nodes array follows the React Flow Node interface
-extended with Parlay-specific data fields defined in the builder-nodes spec:
-- node.type: the NodeTypeName (e.g., "page", "likert", "real_llm")
-- node.data: the node-type-specific data object (label, slug, condition, etc.)
-- node.parentId: the parent container node ID (for content-tier nodes)
-- node.position: { x, y } canvas coordinates (relative to parent for
-  child nodes, absolute for root nodes). Child nodes inside containers
-  use stacked layout positions computed by the builder store (see
-  builder-canvas spec: Stacked child layout) — they are not freely
-  positionable.
+Each node in the `nodes` array SHALL follow the React Flow Node
+interface extended with Parlay-specific data fields defined in the
+builder-nodes spec:
 
-The initial flow_definition for a new facet SHALL contain a Start node
-positioned at { x: 0, y: 200 } and an End node positioned at { x: 600, y: 200 }
-with a default viewport of { x: 0, y: 0, zoom: 1 }.
+- `node.type` — the `NodeTypeName` (e.g., `"page"`, `"likert"`,
+  `"real_llm"`).
+- `node.data` — the node-type-specific data object containing fields
+  like `label`, `alias`, `condition`, `record_response`, etc. The
+  `alias` field on response-bearing nodes SHALL be the formula-time
+  identifier (see builder-nodes spec for the full schema). Container
+  nodes (Page, PageGroup, Group) and anchor nodes (Start, End) MUST
+  NOT have an `alias` field.
+- `node.parentId` — the parent container node id (for content-tier
+  nodes).
+- `node.position` — `{ x, y }` canvas coordinates, relative to parent
+  for child nodes and absolute for root nodes. Child nodes inside
+  containers SHALL use the stacked layout positions computed by the
+  builder store (see builder-canvas spec: Stacked child layout) and
+  MUST NOT be freely positionable.
+
+The initial `flow_definition` for a new facet SHALL contain a Start
+node positioned at `{ x: 0, y: 200 }` and an End node positioned at
+`{ x: 600, y: 200 }` with a default viewport of
+`{ x: 0, y: 0, zoom: 1 }`.
+
+#### Scenario: Persisting a flow round-trips alias on response-bearing nodes
+- **GIVEN** a builder session contains a Likert node with `alias: "q-age"`
+- **WHEN** the auto-save writes `flow_definition` to Supabase
+- **AND** the same facet is later loaded
+- **THEN** the loaded Likert node's `data.alias` SHALL equal `"q-age"`
+
+#### Scenario: Container node has no alias field
+- **GIVEN** a Page node persisted in `flow_definition`
+- **WHEN** the spec is inspected
+- **THEN** `node.data` MUST NOT contain an `alias` key
 
 ### Requirement: Auto-save
 The system SHALL debounce-save flow_definition AND color_scheme to Supabase
@@ -162,3 +182,4 @@ locking or conflict detection. The most recent save overwrites prior state.
 - GIVEN a form has facets "default" (is_default=true) and "variant-a"
 - WHEN the owner deletes "default"
 - THEN "variant-a" is auto-promoted to is_default = true
+

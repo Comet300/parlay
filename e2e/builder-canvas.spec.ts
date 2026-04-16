@@ -5,9 +5,12 @@ import { test, expect, type Page } from '@playwright/test'
 /** Create a new form and land on the builder with React Flow canvas visible. */
 async function createFormAndGoToBuilder(page: Page) {
   await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
   await page.getByRole('button', { name: 'New Form' }).click()
   await expect(page).toHaveURL(/\/build\/[a-f0-9-]+/, { timeout: 15_000 })
   await page.waitForSelector('.react-flow', { timeout: 10_000 })
+  // Wait for React Flow fitView animation to settle
+  await page.waitForTimeout(500)
 }
 
 /** Locate a canvas node by its visible text label. */
@@ -15,9 +18,32 @@ function canvasNode(page: Page, text: string) {
   return page.locator('.react-flow__node').filter({ hasText: text })
 }
 
-/** Open the Add Node panel via the floating canvas button. */
+/** Dismiss the node config popup if it's open. Waits briefly for it to
+ *  appear (React may open it asynchronously after a selection or drag),
+ *  then clicks the semi-transparent backdrop to close it reliably. */
+async function dismissPopup(page: Page) {
+  const popup = page.locator('[data-node-config-popup]')
+  await popup.waitFor({ state: 'visible', timeout: 1_500 }).catch(() => {})
+  if (await popup.isVisible().catch(() => false)) {
+    // Click the backdrop via JS — the backdrop is the sibling element
+    // rendered immediately before the popup in the DOM.
+    await page.evaluate(() => {
+      const popup = document.querySelector('[data-node-config-popup]')
+      const backdrop = popup?.previousElementSibling as HTMLElement
+      if (backdrop) backdrop.click()
+    })
+    await page.waitForTimeout(300)
+    // If still open, force-blur and Escape as fallback
+    if (await popup.isVisible().catch(() => false)) {
+      await page.evaluate(() => (document.activeElement as HTMLElement)?.blur?.())
+      await dismissPopup(page)
+    }
+  }
+}
+
+/** Open the Add Node panel via the toolbar "+" button. */
 async function openAddNodePanel(page: Page) {
-  const btn = page.getByRole('button', { name: 'Add Node' })
+  const btn = page.getByTitle('Add Node')
   if (await btn.isVisible()) await btn.click()
   await expect(page.locator('text=Page-tier')).toBeVisible({ timeout: 3_000 })
 }
@@ -34,6 +60,7 @@ async function dragNodeToCanvas(
     .first()
   const canvas = page.locator('.react-flow__pane')
   await draggable.dragTo(canvas, { targetPosition: target })
+  await dismissPopup(page)
 }
 
 /** Get the bounding box of the React Flow canvas pane. */
@@ -49,6 +76,29 @@ async function nodeCount(page: Page, text: string) {
 }
 
 /** Get the modifier key for the current platform. */
+/**
+ * Drag a draggable item into a Page container by targeting the canvas pane
+ * at the Page's absolute position. This avoids react-flow__pane intercepting
+ * pointer events when dragTo targets the node element directly.
+ */
+async function dragIntoPage(
+  page: Page,
+  source: ReturnType<typeof page.locator>,
+  pageLabel = 'Page',
+) {
+  const pageNode = canvasNode(page, pageLabel)
+  const pageBox = await pageNode.boundingBox()
+  const paneBox = await page.locator('.react-flow__pane').boundingBox()
+  if (!pageBox || !paneBox) throw new Error('Cannot get bounding boxes')
+  // Compute the Page's center relative to the pane
+  const targetX = pageBox.x - paneBox.x + pageBox.width / 2
+  const targetY = pageBox.y - paneBox.y + pageBox.height / 2
+  await source.dragTo(page.locator('.react-flow__pane'), {
+    targetPosition: { x: targetX, y: targetY },
+  })
+  await dismissPopup(page)
+}
+
 function mod() {
   return process.platform === 'darwin' ? 'Meta' : 'Control'
 }
@@ -139,9 +189,9 @@ test.describe('Add Node Panel', () => {
     })
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
-    // Select the Page to enable content-tier dragging
-    await canvasNode(page, 'Page').click()
-    await page.waitForTimeout(300)
+    // Select the Page to enable content-tier dragging, then dismiss the popup
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
 
     // Re-open panel if needed
     const panelVisible = await page
@@ -150,16 +200,17 @@ test.describe('Add Node Panel', () => {
       .catch(() => false)
     if (!panelVisible) await openAddNodePanel(page)
 
-    // Drag Likert to empty canvas area (outside Page)
+    // Drag Likert to empty canvas area outside the Page.
+    // The Add Node panel sits at the left (w-56 = 224px), minimap at bottom-right.
+    // Target the right side of the canvas, above the minimap.
     await dragNodeToCanvas(page, 'Likert', {
-      x: box.width * 0.9,
-      y: box.height * 0.9,
+      x: box.width * 0.75,
+      y: box.height * 0.4,
     })
 
     // Toast should appear
-    const toast = page.locator('#builder-toast')
-    await expect(toast).not.toHaveClass(/hidden/, { timeout: 3_000 })
-    await expect(toast).toContainText('inside a Page')
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'inside a Page' })
+    await expect(toast).toBeVisible({ timeout: 3_000 })
 
     // Likert should NOT be on the canvas
     const likertCount = await nodeCount(page, 'Likert')
@@ -180,9 +231,9 @@ test.describe('Add Node Panel', () => {
     })
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
-    // Select the Page
-    await canvasNode(page, 'Page').click()
-    await page.waitForTimeout(300)
+    // Select the Page, then dismiss the popup
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
 
     // Get Page position for targeted drop
     const pageBox = await canvasNode(page, 'Page').boundingBox()
@@ -199,12 +250,7 @@ test.describe('Add Node Panel', () => {
       .locator('[draggable="true"]')
       .filter({ hasText: 'Likert' })
       .first()
-    await likertDraggable.dragTo(canvasNode(page, 'Page'), {
-      targetPosition: {
-        x: pageBox.width / 2,
-        y: pageBox.height / 2,
-      },
-    })
+    await dragIntoPage(page, likertDraggable)
 
     // Likert should now be visible
     await expect(canvasNode(page, 'Likert')).toBeVisible({ timeout: 5_000 })
@@ -369,12 +415,9 @@ test.describe('Publish Validation', () => {
     await expect(publishBtn).toBeVisible()
   })
 
-  test('client-side pre-validation blocks publish with slug conflicts', async ({
+  test('client-side pre-validation blocks publish with dead paths', async ({
     page,
   }) => {
-    // This scenario requires two content nodes with the same slug.
-    // Since setting up a full flow with duplicate slugs is complex in E2E,
-    // we test the publish button shows client-side blockers when dead paths exist.
     await createFormAndGoToBuilder(page)
     await openAddNodePanel(page)
 
@@ -404,6 +447,255 @@ test.describe('Publish Validation', () => {
     await expect(
       page.getByRole('button', { name: 'Unpublish' }),
     ).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('publish blocked on duplicate alias', async ({ page }) => {
+    await createFormAndGoToBuilder(page)
+    await openAddNodePanel(page)
+
+    // Add a Page first (content-tier Likerts must live inside a Page).
+    const box = await canvasBox(page)
+    await dragNodeToCanvas(page, 'Page', {
+      x: box.width / 2,
+      y: box.height / 2,
+    })
+    await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
+
+    // Select the Page so content-tier items become draggable, then close the
+    // popup that opens on selection.
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
+
+    // Re-open the Add Node panel if needed.
+    const panelVisible1 = await page
+      .locator('text=Content-tier')
+      .isVisible()
+      .catch(() => false)
+    if (!panelVisible1) await openAddNodePanel(page)
+
+    // Drop Likert #1 inside the Page.
+    const likertDraggable1 = page
+      .locator('[draggable="true"]')
+      .filter({ hasText: 'Likert' })
+      .first()
+    await dragIntoPage(page, likertDraggable1)
+    await expect(canvasNode(page, 'New Likert')).toBeVisible({ timeout: 5_000 })
+
+    // Give Likert #1 alias "q-age" via the Reference field.
+    await canvasNode(page, 'New Likert').first().click()
+    await page.getByPlaceholder('e.g. q-age').fill('q-age')
+    await page.waitForTimeout(200)
+    await dismissPopup(page)
+
+    // Re-select the Page and drop Likert #2.
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await page.waitForTimeout(300)
+    await dismissPopup(page)
+
+    const panelVisible2 = await page
+      .locator('text=Content-tier')
+      .isVisible()
+      .catch(() => false)
+    if (!panelVisible2) await openAddNodePanel(page)
+
+    const likertDraggable2 = page
+      .locator('[draggable="true"]')
+      .filter({ hasText: 'Likert' })
+      .first()
+    await dragIntoPage(page, likertDraggable2)
+
+    // Wait until two Likert nodes exist on the canvas.
+    await expect
+      .poll(async () => nodeCount(page, 'New Likert'), { timeout: 5_000 })
+      .toBeGreaterThanOrEqual(2)
+
+    // Set Likert #2's alias to the same "q-age" value — duplicate conflict.
+    await canvasNode(page, 'New Likert').nth(1).click()
+    await page.getByPlaceholder('e.g. q-age').fill('q-age')
+    await dismissPopup(page)
+
+    // Click Publish and verify the client preflight surfaces the alias conflict.
+    await page.getByRole('button', { name: 'Publish' }).click()
+    const error = page.locator('text=/Cannot publish/i')
+    await expect(error).toBeVisible({ timeout: 5_000 })
+    await expect(error).toContainText(/alias conflict/i)
+
+    // Facet should still be in draft — Unpublish button must not appear.
+    await expect(
+      page.getByRole('button', { name: 'Unpublish' }),
+    ).not.toBeVisible({ timeout: 1_000 })
+  })
+
+  test('publish blocked on invalid alias pattern', async ({ page }) => {
+    await createFormAndGoToBuilder(page)
+    await openAddNodePanel(page)
+
+    // Add Page and nest a single Likert inside it.
+    const box = await canvasBox(page)
+    await dragNodeToCanvas(page, 'Page', {
+      x: box.width / 2,
+      y: box.height / 2,
+    })
+    await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
+
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
+
+    const panelVisible = await page
+      .locator('text=Content-tier')
+      .isVisible()
+      .catch(() => false)
+    if (!panelVisible) await openAddNodePanel(page)
+
+    const likertDraggable = page
+      .locator('[draggable="true"]')
+      .filter({ hasText: 'Likert' })
+      .first()
+    await dragIntoPage(page, likertDraggable)
+    await expect(canvasNode(page, 'New Likert')).toBeVisible({ timeout: 5_000 })
+
+    // Open the Likert editor and type an invalid alias pattern.
+    await canvasNode(page, 'New Likert').first().click()
+    await page.getByPlaceholder('e.g. q-age').fill('Bad Alias!')
+    await page.waitForTimeout(200)
+
+    // Inline editor should show the validation error while the popup is open.
+    await expect(
+      page.locator('text=Lowercase alphanumeric with hyphens only'),
+    ).toBeVisible({ timeout: 2_000 })
+
+    // Close the popup, then click Publish.
+    await dismissPopup(page)
+    await page.getByRole('button', { name: 'Publish' }).click()
+
+    // The toolbar error must mention an invalid alias blocker.
+    const error = page.locator('text=/Cannot publish/i')
+    await expect(error).toBeVisible({ timeout: 5_000 })
+    await expect(error).toContainText(/invalid alias/i)
+  })
+
+  test('empty alias does not block publish', async ({ page }) => {
+    await createFormAndGoToBuilder(page)
+    await openAddNodePanel(page)
+
+    // Add a Page with a Likert inside it, then clear the alias.
+    const box = await canvasBox(page)
+    await dragNodeToCanvas(page, 'Page', {
+      x: box.width / 2,
+      y: box.height / 2,
+    })
+    await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
+
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
+
+    const panelVisible = await page
+      .locator('text=Content-tier')
+      .isVisible()
+      .catch(() => false)
+    if (!panelVisible) await openAddNodePanel(page)
+
+    const likertDraggable = page
+      .locator('[draggable="true"]')
+      .filter({ hasText: 'Likert' })
+      .first()
+    await dragIntoPage(page, likertDraggable)
+    await expect(canvasNode(page, 'New Likert')).toBeVisible({ timeout: 5_000 })
+
+    // Open the Likert and ensure its Reference field is empty.
+    await canvasNode(page, 'New Likert').first().click()
+    await page.getByPlaceholder('e.g. q-age').fill('')
+    await page.waitForTimeout(200)
+
+    // No "missing alias" / invalid/duplicate alias inline error should appear.
+    await expect(
+      page.locator('text=Lowercase alphanumeric with hyphens only'),
+    ).not.toBeVisible({ timeout: 1_000 })
+    await expect(
+      page.locator('text=Duplicate alias — must be unique'),
+    ).not.toBeVisible({ timeout: 1_000 })
+
+    await dismissPopup(page)
+
+    // Click Publish. The Page container still has no outgoing edge (the Likert
+    // is a child, not a page-tier successor), so the dead-path blocker will fire.
+    // The alias blockers must NOT appear in the error text.
+    await page.getByRole('button', { name: 'Publish' }).click()
+    const error = page.locator('text=/Cannot publish/i')
+    await expect(error).toBeVisible({ timeout: 5_000 })
+    await expect(error).not.toContainText(/alias conflict/i)
+    await expect(error).not.toContainText(/invalid alias/i)
+    await expect(error).not.toContainText(/missing alias/i)
+  })
+})
+
+// ─── 5b. Flow-wide is_checkpoint Visibility ─────────────────────────────────
+
+test.describe('is_checkpoint visibility', () => {
+  test('is_checkpoint visible on a sibling page when any page enables progress bar', async ({
+    page,
+  }) => {
+    await createFormAndGoToBuilder(page)
+    await openAddNodePanel(page)
+
+    // Add two Pages to the canvas. Both start with show_progress_bar = false
+    // so their editors should initially not show the Is checkpoint checkbox.
+    const box = await canvasBox(page)
+    await dragNodeToCanvas(page, 'Page', {
+      x: box.width * 0.35,
+      y: box.height / 2,
+    })
+    await expect(canvasNode(page, 'New Page').first()).toBeVisible({
+      timeout: 5_000,
+    })
+    // Close any popup that opened on drop.
+    await dismissPopup(page)
+
+    // Re-open the add panel if it collapsed.
+    const panelVisible = await page
+      .locator('text=Page-tier')
+      .isVisible()
+      .catch(() => false)
+    if (!panelVisible) await openAddNodePanel(page)
+
+    await dragNodeToCanvas(page, 'Page', {
+      x: box.width * 0.65,
+      y: box.height / 2,
+    })
+    await expect
+      .poll(async () => nodeCount(page, 'New Page'), { timeout: 5_000 })
+      .toBeGreaterThanOrEqual(2)
+    await dismissPopup(page)
+
+    // Open Page A's editor and verify Is checkpoint is NOT shown yet.
+    await canvasNode(page, 'New Page').first().click()
+    await expect(page.getByText('Show progress bar')).toBeVisible({
+      timeout: 3_000,
+    })
+    await expect(page.getByText('Is checkpoint')).not.toBeVisible({
+      timeout: 1_000,
+    })
+
+    // Enable Show progress bar on Page A.
+    await page.getByText('Show progress bar').click()
+    await page.waitForTimeout(200)
+
+    // Close the popup.
+    await dismissPopup(page)
+
+    // Open Page B's editor and verify Is checkpoint IS shown, even though
+    // Page B's own show_progress_bar is still false.
+    await canvasNode(page, 'New Page').nth(1).click()
+    await expect(page.getByText('Is checkpoint')).toBeVisible({
+      timeout: 3_000,
+    })
+
+    // Page B's own Show progress bar checkbox should still be unchecked.
+    const showProgressCheckbox = page
+      .locator('label')
+      .filter({ hasText: 'Show progress bar' })
+      .locator('input[type="checkbox"]')
+    await expect(showProgressCheckbox).not.toBeChecked()
   })
 })
 
@@ -438,13 +730,16 @@ test.describe('Node Deletion', () => {
 
     // Select Start
     await canvasNode(page, 'Start').click()
+    await page.waitForTimeout(200)
     await page.keyboard.press('Delete')
 
     // Start should still exist
     await expect(canvasNode(page, 'Start')).toBeVisible()
+    await dismissPopup(page)
 
     // Select End
     await canvasNode(page, 'End').click()
+    await page.waitForTimeout(200)
     await page.keyboard.press('Delete')
     await expect(canvasNode(page, 'End')).toBeVisible()
   })
@@ -463,9 +758,9 @@ test.describe('Node Deletion', () => {
     })
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
-    // Select Page, add Likert inside
-    await canvasNode(page, 'Page').click()
-    await page.waitForTimeout(300)
+    // Select Page, dismiss popup, then add Likert inside
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
 
     const panelVisible = await page
       .locator('text=Content-tier')
@@ -479,25 +774,22 @@ test.describe('Node Deletion', () => {
         .locator('[draggable="true"]')
         .filter({ hasText: 'Likert' })
         .first()
-      await likertDraggable.dragTo(canvasNode(page, 'Page'), {
-        targetPosition: { x: pageBox.width / 2, y: pageBox.height / 2 },
-      })
+      await dragIntoPage(page, likertDraggable)
     }
 
     // Close popup if open
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(200)
+    await dismissPopup(page)
 
     // Select Page and delete
-    await canvasNode(page, 'Page').click()
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
     await page.keyboard.press('Delete')
 
     // Confirmation dialog should appear
-    const dialog = page.locator('text=/Delete.*node/i')
+    const dialog = page.locator('text=/Delete.*node/i').first()
     await expect(dialog).toBeVisible({ timeout: 3_000 })
 
-    // Confirm deletion
-    await page.getByRole('button', { name: 'Delete' }).click()
+    // Confirm deletion (the dialog's red button, not the popup header's icon)
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
 
     // Page should be gone
     await expect(canvasNode(page, 'Page')).not.toBeVisible({ timeout: 3_000 })
@@ -516,7 +808,7 @@ test.describe('Node Deletion', () => {
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
     // Click Page to open popup
-    await canvasNode(page, 'Page').click()
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
     await page.waitForTimeout(500)
 
     // Click the trash/delete button in the popup
@@ -545,10 +837,10 @@ test.describe('Undo/Redo', () => {
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
     // Select and delete
-    await canvasNode(page, 'Page').click()
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
     await page.keyboard.press('Escape') // close popup
     await page.waitForTimeout(200)
-    await canvasNode(page, 'Page').click()
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
     await page.keyboard.press('Delete')
     await expect(canvasNode(page, 'Page')).not.toBeVisible({ timeout: 3_000 })
 
@@ -571,10 +863,9 @@ test.describe('Undo/Redo', () => {
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
     // Delete
-    await canvasNode(page, 'Page').click()
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(200)
-    await canvasNode(page, 'Page').click()
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
     await page.keyboard.press('Delete')
     await expect(canvasNode(page, 'Page')).not.toBeVisible({ timeout: 3_000 })
 
@@ -605,7 +896,7 @@ test.describe('Copy/Paste', () => {
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
     // Select and copy
-    await canvasNode(page, 'Page').click()
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
     await page.keyboard.press('Escape') // close popup first
     await page.waitForTimeout(200)
     await canvasNode(page, 'Page').first().click()
@@ -732,17 +1023,19 @@ test.describe('Mobile Layout', () => {
   }) => {
     await createFormAndGoToBuilder(page)
 
-    // Open hamburger menu
-    // The menu button contains a Menu SVG icon
-    const menuButtons = page.locator('button').filter({
-      has: page.locator('svg.lucide-menu'),
-    })
-    const menuBtn = menuButtons.first()
-    await menuBtn.click()
+    // Wait for the media-query hook to fire and re-render to mobile layout.
+    // There are two lucide-menu buttons: sidebar nav (h-5) and builder toolbar (h-4).
+    // Target the builder toolbar one by its smaller icon size.
+    const menuBtn = page.locator('button').filter({
+      has: page.locator('svg.lucide-menu.h-4'),
+    }).first()
+    await expect(menuBtn).toBeVisible({ timeout: 10_000 })
 
-    // Slide-over should show Publish and Form Settings
-    await expect(page.locator('text=Publish')).toBeVisible({ timeout: 3_000 })
-    await expect(page.locator('text=Form Settings')).toBeVisible()
+    await menuBtn.click()
+    await page.waitForTimeout(500)
+
+    // Slide-over should show Publish and Archive form
+    await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible({ timeout: 5_000 })
     await expect(page.locator('text=Archive form')).toBeVisible()
   })
 })
@@ -944,9 +1237,9 @@ test.describe('Paste Rejection', () => {
     })
     await expect(canvasNode(page, 'Page')).toBeVisible({ timeout: 5_000 })
 
-    // Select Page to enable content-tier
-    await canvasNode(page, 'Page').click()
-    await page.waitForTimeout(300)
+    // Select Page to enable content-tier, then dismiss popup
+    await canvasNode(page, 'Page').click({ position: { x: 50, y: 10 } })
+    await dismissPopup(page)
 
     const panelVisible = await page
       .locator('text=Content-tier')
@@ -960,15 +1253,12 @@ test.describe('Paste Rejection', () => {
         .locator('[draggable="true"]')
         .filter({ hasText: 'Likert' })
         .first()
-      await likertDraggable.dragTo(canvasNode(page, 'Page'), {
-        targetPosition: { x: pageBox.width / 2, y: pageBox.height / 2 },
-      })
+      await dragIntoPage(page, likertDraggable)
     }
     await expect(canvasNode(page, 'Likert')).toBeVisible({ timeout: 5_000 })
 
-    // Close popup, select ONLY the Likert (not the Page)
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(200)
+    // Close popup if open, select ONLY the Likert (not the Page)
+    await dismissPopup(page)
     await canvasNode(page, 'Likert').click()
 
     // Copy just the Likert
@@ -978,8 +1268,7 @@ test.describe('Paste Rejection', () => {
     await page.keyboard.press(`${mod()}+v`)
 
     // Toast should appear
-    const toast = page.locator('#builder-toast')
-    await expect(toast).not.toHaveClass(/hidden/, { timeout: 3_000 })
-    await expect(toast).toContainText('parent container')
+    const toast = page.locator('[data-sonner-toast]').filter({ hasText: 'parent container' })
+    await expect(toast).toBeVisible({ timeout: 3_000 })
   })
 })
