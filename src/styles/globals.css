@@ -21,3 +21,49 @@ body {
   color: var(--color-text);
   background-color: var(--color-background);
 }
+
+/* Selected edge — brand pink outline. Cover multiple React Flow v12
+   variants for the "selected" marker. */
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge[data-selected="true"] .react-flow__edge-path,
+.react-flow__edge-path.selected {
+  stroke: #EA4C89 !important;
+  stroke-width: 3 !important;
+}
+.react-flow__edge.selected .react-flow__edge-interaction,
+.react-flow__edge[data-selected="true"] .react-flow__edge-interaction {
+  stroke: transparent;
+}
+
+/* Strip React Flow's default chrome (border/background/shadow) for our
+   custom-styled nodes. We render our own container/leaf styling inside.
+   Note: drop_preview is INTENTIONALLY excluded — we want it to have a
+   visible dashed-border outline from the wrapper itself. */
+.react-flow__node-page,
+.react-flow__node-page_group,
+.react-flow__node-group,
+.react-flow__node-start,
+.react-flow__node-end,
+.react-flow__node-likert,
+.react-flow__node-single_choice,
+.react-flow__node-multi_choice,
+.react-flow__node-email_collection,
+.react-flow__node-card,
+.react-flow__node-scripted_llm,
+.react-flow__node-real_llm {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Skeleton preview node — Apple-style soft placeholder.
+   A subtle translucent fill with a hairline border. No dashes, no pulse. */
+.react-flow__node-drop_preview {
+  pointer-events: none;
+  background: rgba(99, 102, 241, 0.06) !important;
+  border: 1px solid rgba(99, 102, 241, 0.22) !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.4) !important;
+}

@@ -14,7 +14,7 @@ import { useShallow } from 'zustand/shallow'
 import { useBuilderStore } from '~/lib/stores/builder-store'
 import { getCanvasNodeTypes, NodeTypeRegistry } from '~/lib/node-registry'
 import { PAGE_TIER_TYPES, CONTENT_TIER_TYPES, ALLOWED_CHILDREN, CONTAINER_TYPES } from '~/lib/node-registry/types'
-import { CHILD_HEIGHT, CHILD_WIDTH, STACK_PADDING_X, STACK_PADDING_TOP, STACK_GAP } from '~/lib/stores/builder-store'
+import { CHILD_HEIGHT, STACK_PADDING_X, STACK_PADDING_TOP, STACK_PADDING_BOTTOM, STACK_GAP, MAX_GROUP_NEST_DEPTH, CONTAINER_MIN_H, CONTAINER_MIN_W } from '~/lib/stores/builder-store'
 import type { FlowNode, NodeTypeName } from '~/lib/node-registry/types'
 import { NodeConfigPopup } from './node-config-popup'
 import { AddNodePanel } from './add-node-panel'
@@ -30,7 +30,6 @@ interface BuilderCanvasProps {
 
 
 export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: BuilderCanvasProps) {
-  console.log('[canvas] render')
   const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, pushSnapshot, undo, redo, copyNodes, paste, reparentChild, detachNode } = useBuilderStore(
     useShallow((s) => ({
       nodes: s.nodes,
@@ -58,6 +57,12 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
     childCount: number
   } | null>(null)
   const [dropPreview, setDropPreview] = useState<{
+    containerId: string
+    insertIndex: number
+  } | null>(null)
+  // Preserves the origin slot during internal drags so the source container
+  // doesn't visibly shrink. Cleared on drop/snap.
+  const [originPreview, setOriginPreview] = useState<{
     containerId: string
     insertIndex: number
   } | null>(null)
@@ -250,14 +255,69 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
     [nodes, edges, addEdge, pushSnapshot],
   )
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
+  const onDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+
+      // During an external (sidebar) drag, compute the would-be drop target
+      // and show a skeleton preview inside the target container.
+      // DataTransfer payloads from external drags aren't readable during
+      // dragover (only on drop) in most browsers, so we show the skeleton
+      // only when hovering over a valid container-tier area.
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const container = findContainerAtPosition(nodes, position)
+      if (!container) {
+        if (dropPreview) setDropPreview(null)
+        return
+      }
+      const containerType = (container.type ?? container.data.type) as NodeTypeName
+      if (containerType === 'scripted_llm' || containerType === 'real_llm') {
+        if (dropPreview) setDropPreview(null)
+        return
+      }
+
+      // Calculate insert index based on drop y within container. The
+      // container's position is relative to its parent (if nested), so use
+      // its absolute y to match the canvas-absolute drop position.
+      const containerAbs = absolutePosition(nodes, container)
+      const relY = position.y - containerAbs.y
+      const siblings = nodes
+        .filter((n) => n.parentId === container.id)
+        .sort((a, b) => a.position.y - b.position.y)
+      let insertIndex = siblings.length
+      for (let i = 0; i < siblings.length; i++) {
+        const sibH = (siblings[i].style?.height as number) ?? CHILD_HEIGHT
+        if (relY < siblings[i].position.y + sibH / 2) {
+          insertIndex = i
+          break
+        }
+      }
+
+      if (
+        !dropPreview ||
+        dropPreview.containerId !== container.id ||
+        dropPreview.insertIndex !== insertIndex
+      ) {
+        setDropPreview({ containerId: container.id, insertIndex })
+      }
+    },
+    [nodes, dropPreview, screenToFlowPosition],
+  )
+
+  const onDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear when leaving the pane entirely, not when moving between children
+    const related = e.relatedTarget as Node | null
+    if (!related || !(e.currentTarget as Node).contains(related)) {
+      setDropPreview(null)
+    }
   }, [])
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
+      // Clear any hover skeleton so the real node replaces it cleanly
+      setDropPreview(null)
       const typeStr = e.dataTransfer.getData('application/parlay-node-type')
       if (!typeStr) return
 
@@ -289,12 +349,31 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
           return
         }
 
+        // Enforce Group nesting depth cap
+        if (nodeType === 'group') {
+          let depth = 1
+          let cursor: FlowNode | undefined = container
+          while (cursor && cursor.data.type === 'group') {
+            depth += 1
+            cursor = cursor.parentId
+              ? nodes.find((n) => n.id === cursor!.parentId)
+              : undefined
+          }
+          if (depth > MAX_GROUP_NEST_DEPTH) {
+            toast.error(`Cannot nest Groups more than ${MAX_GROUP_NEST_DEPTH} levels deep`)
+            return
+          }
+        }
+
         // Calculate insert index based on drop y-position within container
-        const relY = position.y - container.position.y
+        // (use absolute y since container may be nested inside another container)
+        const containerAbs = absolutePosition(nodes, container)
+        const relY = position.y - containerAbs.y
         const siblings = nodes.filter((n) => n.parentId === container.id).sort((a, b) => a.position.y - b.position.y)
         let insertIndex = siblings.length
         for (let i = 0; i < siblings.length; i++) {
-          if (relY < siblings[i].position.y + 24) { // 24 = half child height
+          const sibH = (siblings[i].style?.height as number) ?? CHILD_HEIGHT
+          if (relY < siblings[i].position.y + sibH / 2) {
             insertIndex = i
             break
           }
@@ -330,6 +409,9 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
     parentId: string
     position: { x: number; y: number }
   } | null>(null)
+  // Remembers the last container the drag was targeting. Used for hysteresis
+  // so the preview doesn't flicker when the pointer is near a container edge.
+  const lastTargetRef = useRef<string | null>(null)
 
   // On drag start: if it's a child node, detach from parent so it can
   // move freely across the canvas. Convert position to absolute coords.
@@ -338,9 +420,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       const nodeType = (node.type ?? node.data.type) as NodeTypeName
       if (!node.parentId || !CONTENT_TIER_TYPES.has(nodeType)) return
 
-      const parent = nodes.find((n) => n.id === node.parentId)
-      const absX = (parent?.position.x ?? 0) + node.position.x
-      const absY = (parent?.position.y ?? 0) + node.position.y
+      const { x: absX, y: absY } = absolutePosition(nodes, node)
 
       // Save origin for snap-back
       dragOriginRef.current = {
@@ -348,6 +428,19 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
         parentId: node.parentId,
         position: { ...node.position },
       }
+
+      // Record origin slot so we can show a skeleton there during the drag
+      const originSiblings = nodes
+        .filter((n) => n.parentId === node.parentId && n.id !== node.id)
+        .sort((a, b) => a.position.y - b.position.y)
+      let originIdx = originSiblings.length
+      for (let i = 0; i < originSiblings.length; i++) {
+        if (node.position.y < originSiblings[i].position.y) {
+          originIdx = i
+          break
+        }
+      }
+      setOriginPreview({ containerId: node.parentId, insertIndex: originIdx })
 
       // Detach from parent, convert to absolute position
       detachNode(node.id, { x: absX, y: absY })
@@ -361,35 +454,66 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       if (!dragOriginRef.current) return // only for child node drags
 
       const dropPos = node.position // absolute (detached)
-      const targetContainer = findContainerAtPosition(
-        nodes.filter((n) => n.id !== node.id),
-        dropPos,
-      )
+      const otherNodes = nodes.filter((n) => n.id !== node.id)
+      let targetContainer = findContainerAtPosition(otherNodes, dropPos)
+
+      // Hysteresis: if the pointer is still inside the previously-targeted
+      // container's bounds, keep that target to prevent jitter at container
+      // boundaries. Only switch when the pointer clearly leaves it.
+      if (lastTargetRef.current && targetContainer?.id !== lastTargetRef.current) {
+        const lastTarget = otherNodes.find((n) => n.id === lastTargetRef.current)
+        if (lastTarget) {
+          const abs = absolutePosition(otherNodes, lastTarget)
+          const w = (lastTarget.style?.width as number) ?? 200
+          const h = (lastTarget.style?.height as number) ?? 100
+          if (
+            dropPos.x >= abs.x &&
+            dropPos.x <= abs.x + w &&
+            dropPos.y >= abs.y &&
+            dropPos.y <= abs.y + h
+          ) {
+            targetContainer = lastTarget
+          }
+        }
+      }
 
       if (!targetContainer || !CONTAINER_TYPES.has((targetContainer.type ?? targetContainer.data.type) as NodeTypeName)) {
+        lastTargetRef.current = null
         setDropPreview(null)
         return
       }
 
       const targetType = (targetContainer.type ?? targetContainer.data.type) as NodeTypeName
       if (targetType === 'scripted_llm' || targetType === 'real_llm') {
+        lastTargetRef.current = null
         setDropPreview(null)
         return
       }
+      lastTargetRef.current = targetContainer.id
 
-      const relY = dropPos.y - targetContainer.position.y
+      const targetAbs = absolutePosition(nodes, targetContainer)
+      const relY = dropPos.y - targetAbs.y
       const siblings = nodes
         .filter((n) => n.parentId === targetContainer.id && n.id !== node.id)
         .sort((a, b) => a.position.y - b.position.y)
       let insertIndex = siblings.length
       for (let i = 0; i < siblings.length; i++) {
-        if (relY < siblings[i].position.y + CHILD_HEIGHT / 2) {
+        const sibH = (siblings[i].style?.height as number) ?? CHILD_HEIGHT
+        if (relY < siblings[i].position.y + sibH / 2) {
           insertIndex = i
           break
         }
       }
 
       setDropPreview({ containerId: targetContainer.id, insertIndex })
+
+      // If the user has dragged into a different container than origin,
+      // release the origin slot so the source container shrinks back
+      // (no "ghost" slot held open in a container the node is leaving).
+      const origin = dragOriginRef.current
+      if (origin && origin.parentId !== targetContainer.id) {
+        setOriginPreview(null)
+      }
     },
     [nodes],
   )
@@ -398,6 +522,8 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
   const onNodeDragStop = useCallback(
     (_: React.MouseEvent, node: FlowNode) => {
       setDropPreview(null)
+      setOriginPreview(null)
+      lastTargetRef.current = null
       const origin = dragOriginRef.current
       dragOriginRef.current = null
 
@@ -438,13 +564,16 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       }
 
       // Calculate insert index based on drop y relative to target container
-      const relY = dropPos.y - targetContainer.position.y
+      // (use absolute y since container may be nested inside another container)
+      const targetAbs = absolutePosition(nodes, targetContainer)
+      const relY = dropPos.y - targetAbs.y
       const targetSiblings = nodes
         .filter((n) => n.parentId === targetContainer.id && n.id !== node.id)
         .sort((a, b) => a.position.y - b.position.y)
       let insertIndex = targetSiblings.length
       for (let i = 0; i < targetSiblings.length; i++) {
-        if (relY < targetSiblings[i].position.y + CHILD_HEIGHT / 2) {
+        const sibH = (targetSiblings[i].style?.height as number) ?? CHILD_HEIGHT
+        if (relY < targetSiblings[i].position.y + sibH / 2) {
           insertIndex = i
           break
         }
@@ -481,62 +610,211 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
     setConfirmDelete(null)
   }
 
-  // Inject skeleton preview node when dragging over a container
+  /**
+   * Inject skeleton preview node(s) for the origin slot and the drop target
+   * so (a) the source container doesn't visibly shrink during a drag and
+   * (b) the user sees exactly where a drop will land. If origin and target
+   * refer to the same slot, render only one skeleton.
+   */
   const displayNodes = useMemo(() => {
-    if (!dropPreview) return nodes
+    if (!dropPreview && !originPreview) return nodes
 
-    const { containerId, insertIndex } = dropPreview
-    const skeletonId = '__drop_preview__'
-    const skeletonY = STACK_PADDING_TOP + insertIndex * (CHILD_HEIGHT + STACK_GAP)
-
-    const skeleton: FlowNode = {
-      id: skeletonId,
-      type: 'drop_preview' as any,
-      position: { x: STACK_PADDING_X, y: skeletonY },
-      data: { type: 'drop_preview' } as any,
-      parentId: containerId,
-      selectable: false,
-      draggable: false,
-      style: { width: CHILD_WIDTH, height: CHILD_HEIGHT },
+    // Combine slots by container. Rule: when the drop target is in the same
+    // container as the origin, show only the drop target skeleton (this is
+    // a reorder-in-place; showing two skeletons would double the gap).
+    // When dropping into a different container, keep BOTH skeletons so the
+    // source container doesn't visibly shrink.
+    type Slot = { containerId: string; insertIndex: number }
+    const slots: Slot[] = []
+    const sameContainerDrag =
+      originPreview && dropPreview && originPreview.containerId === dropPreview.containerId
+    if (sameContainerDrag) {
+      slots.push(dropPreview!)
+    } else {
+      if (originPreview) slots.push(originPreview)
+      if (dropPreview) slots.push(dropPreview)
     }
 
-    // Insert skeleton and shift siblings below it down
-    const result = nodes.map((n) => {
-      if (n.parentId !== containerId) return n
+    // For each container that has a slot, rebuild its children positions with
+    // skeleton(s) inserted, and grow the container to fit.
+    const slotsByContainer = new Map<string, number[]>()
+    for (const s of slots) {
+      if (!slotsByContainer.has(s.containerId)) slotsByContainer.set(s.containerId, [])
+      slotsByContainer.get(s.containerId)!.push(s.insertIndex)
+    }
+    slotsByContainer.forEach((arr) => arr.sort((a, b) => a - b))
+
+    // Build a Map so we can mutate node positions without worrying about
+    // parent-before-child ordering in `nodes`.
+    const resultMap = new Map<string, FlowNode>()
+    for (const n of nodes) resultMap.set(n.id, { ...n })
+
+    const skeletons: FlowNode[] = []
+
+    for (const [containerId, inserts] of slotsByContainer) {
+      const container = resultMap.get(containerId)
+      if (!container) continue
       const siblings = nodes
         .filter((s) => s.parentId === containerId)
         .sort((a, b) => a.position.y - b.position.y)
-      const idx = siblings.indexOf(n)
-      if (idx >= insertIndex) {
-        // Shift down by one slot to make room for skeleton
-        return {
-          ...n,
-          position: {
-            x: STACK_PADDING_X,
-            y: STACK_PADDING_TOP + (idx + 1) * (CHILD_HEIGHT + STACK_GAP),
-          },
+
+      // Interleave siblings with skeletons at the requested insert indices
+      const newOrder: { kind: 'real' | 'skel'; node?: FlowNode; id?: string }[] = []
+      let skelCounter = 0
+      const insertQueue = [...inserts].sort((a, b) => a - b)
+      for (let i = 0; i <= siblings.length; i++) {
+        while (insertQueue.length && insertQueue[0] === i) {
+          insertQueue.shift()
+          newOrder.push({
+            kind: 'skel',
+            id: `__drop_preview__${containerId}_${skelCounter++}`,
+          })
+        }
+        if (i < siblings.length) newOrder.push({ kind: 'real', node: siblings[i] })
+      }
+
+      // Assign cumulative y positions
+      let y = STACK_PADDING_TOP
+      for (const entry of newOrder) {
+        if (entry.kind === 'real' && entry.node) {
+          const existing = resultMap.get(entry.node.id)!
+          const h = (existing.style?.height as number) ?? CHILD_HEIGHT
+          resultMap.set(entry.node.id, {
+            ...existing,
+            position: { x: STACK_PADDING_X, y },
+          })
+          y += h + STACK_GAP
+        } else if (entry.kind === 'skel' && entry.id) {
+          const parentW = (container.style?.width as number) ?? CONTAINER_MIN_W
+          const skelW = parentW - 2 * STACK_PADDING_X
+          const skel: FlowNode = {
+            id: entry.id,
+            type: 'drop_preview' as any,
+            position: { x: STACK_PADDING_X, y },
+            data: { type: 'drop_preview' } as any,
+            parentId: containerId,
+            selectable: false,
+            draggable: false,
+            width: skelW,
+            height: CHILD_HEIGHT,
+            style: {
+              width: skelW,
+              height: CHILD_HEIGHT,
+            },
+            // Pre-populate measured so React Flow skips the ResizeObserver
+            // measurement pass that would otherwise trigger an infinite
+            // render loop (dimensions change → displayNodes recomputes →
+            // new skeleton instance → re-measure → …).
+            measured: { width: skelW, height: CHILD_HEIGHT },
+          }
+          skeletons.push(skel)
+          y += CHILD_HEIGHT + STACK_GAP
         }
       }
-      return n
-    })
 
-    // Also resize the container to fit the extra skeleton
-    const container = result.find((n) => n.id === containerId)
-    if (container) {
-      const childCount = result.filter((n) => n.parentId === containerId).length + 1
-      const neededH = STACK_PADDING_TOP + childCount * CHILD_HEIGHT + (childCount - 1) * STACK_GAP + 12
-      const idx = result.indexOf(container)
-      result[idx] = {
+      // Grow container to fit the extra skeleton(s)
+      const currentH = (container.style?.height as number) ?? CONTAINER_MIN_H
+      const neededH = Math.max(currentH, y - STACK_GAP + STACK_PADDING_BOTTOM)
+      resultMap.set(containerId, {
         ...container,
-        style: { ...container.style, height: Math.max(neededH, (container.style?.height as number) ?? 0) },
+        style: { ...container.style, height: neededH },
+      })
+    }
+
+    // Propagate size changes up the parent chain: when a Group grows to
+    // accommodate a skeleton, its Page/PageGroup ancestor must grow too so
+    // the Group doesn't visually overflow its parent. We also recompute each
+    // ancestor's children y-positions because changing one child's height
+    // shifts later siblings.
+    //
+    // Build a children-by-parent index from the in-progress resultMap and
+    // repeatedly recompute heights/positions bottom-up until stable.
+    const allNodes = Array.from(resultMap.values()).concat(skeletons)
+    const childrenByParent = new Map<string, FlowNode[]>()
+    for (const n of allNodes) {
+      if (!n.parentId) continue
+      if (!childrenByParent.has(n.parentId)) childrenByParent.set(n.parentId, [])
+      childrenByParent.get(n.parentId)!.push(n)
+    }
+    childrenByParent.forEach((arr) => arr.sort((a, b) => a.position.y - b.position.y))
+
+    function recomputeContainer(containerId: string) {
+      const container = resultMap.get(containerId)
+      if (!container) return
+      const kids = childrenByParent.get(containerId) ?? []
+      if (kids.length === 0) return
+
+      // Reassign each child's cumulative y, then set container height
+      let y = STACK_PADDING_TOP
+      for (const kid of kids) {
+        const h = (kid.style?.height as number) ?? CHILD_HEIGHT
+        if (kid.id.startsWith('__drop_preview__')) {
+          const idx = skeletons.findIndex((s) => s.id === kid.id)
+          if (idx >= 0) {
+            skeletons[idx] = {
+              ...skeletons[idx],
+              position: { x: STACK_PADDING_X, y },
+            }
+          }
+        } else {
+          const real = resultMap.get(kid.id)
+          if (real) {
+            resultMap.set(kid.id, {
+              ...real,
+              position: { x: STACK_PADDING_X, y },
+            })
+          }
+        }
+        y += h + STACK_GAP
+      }
+      const neededH = y - STACK_GAP + STACK_PADDING_BOTTOM
+      const currentH = (container.style?.height as number) ?? CONTAINER_MIN_H
+      if (neededH > currentH) {
+        resultMap.set(containerId, {
+          ...container,
+          style: { ...container.style, height: neededH },
+        })
       }
     }
 
-    // Add skeleton (after parent, before children for correct z-order)
-    const parentIdx = result.findIndex((n) => n.id === containerId)
-    result.splice(parentIdx + 1, 0, skeleton)
-    return result
-  }, [nodes, dropPreview])
+    // Walk each container-touching ancestor chain starting from each grown
+    // container, bottom-up.
+    const toVisit = new Set<string>(slotsByContainer.keys())
+    while (toVisit.size > 0) {
+      // Pick a container whose no-descendant-is-in-toVisit (process deepest first)
+      let picked: string | null = null
+      for (const id of toVisit) {
+        const hasDescendantPending = Array.from(toVisit).some((other) => {
+          if (other === id) return false
+          const otherNode = resultMap.get(other)
+          let pid = otherNode?.parentId
+          while (pid) {
+            if (pid === id) return true
+            pid = resultMap.get(pid)?.parentId
+          }
+          return false
+        })
+        if (!hasDescendantPending) {
+          picked = id
+          break
+        }
+      }
+      if (!picked) picked = Array.from(toVisit)[0]!
+      toVisit.delete(picked)
+      recomputeContainer(picked)
+      // Queue the parent so it also recomputes with our new height
+      const parent = resultMap.get(picked)?.parentId
+      if (parent && resultMap.has(parent)) {
+        toVisit.add(parent)
+      }
+    }
+
+    // Return nodes in their original order, then append skeletons after all
+    // their potential parents have appeared.
+    const out = nodes.map((n) => resultMap.get(n.id)!)
+    out.push(...skeletons)
+    return out
+  }, [nodes, dropPreview, originPreview])
 
   return (
     <div className="relative h-full w-full">
@@ -551,6 +829,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
         isValidConnection={isValidConnection}
         onMoveEnd={(_, viewport) => setViewport(viewport)}
         onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
         onDrop={onDrop}
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
@@ -611,24 +890,58 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
   )
 }
 
+/** Absolute (canvas-root) position of a node, walking up parentId chain. */
+function absolutePosition(
+  nodes: FlowNode[],
+  node: FlowNode,
+): { x: number; y: number } {
+  let x = node.position.x
+  let y = node.position.y
+  let pid = node.parentId
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  while (pid) {
+    const parent = byId.get(pid)
+    if (!parent) break
+    x += parent.position.x
+    y += parent.position.y
+    pid = parent.parentId
+  }
+  return { x, y }
+}
+
+/** Find the innermost container whose absolute bounds contain the given
+ *  canvas-absolute position. Nested containers are considered first. */
 function findContainerAtPosition(
   nodes: FlowNode[],
   position: { x: number; y: number },
 ): FlowNode | null {
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    const node = nodes[i]
+  // Candidate containers with absolute bounds
+  const candidates: { node: FlowNode; x: number; y: number; w: number; h: number; depth: number }[] = []
+  for (const node of nodes) {
     if (!CONTAINER_TYPES.has((node.type ?? node.data.type) as NodeTypeName)) continue
-
-    const w = (node.measured?.width ?? 200) as number
-    const h = (node.measured?.height ?? 100) as number
-
+    const abs = absolutePosition(nodes, node)
+    const w = ((node.style?.width as number) ?? (node.measured?.width ?? 200)) as number
+    const h = ((node.style?.height as number) ?? (node.measured?.height ?? 100)) as number
+    // Depth = number of ancestors; innermost containers have greater depth
+    let depth = 0
+    let pid = node.parentId
+    const byId = new Map(nodes.map((n) => [n.id, n]))
+    while (pid) {
+      depth += 1
+      pid = byId.get(pid)?.parentId
+    }
+    candidates.push({ node, x: abs.x, y: abs.y, w, h, depth })
+  }
+  // Sort deepest first so we hit the innermost valid container
+  candidates.sort((a, b) => b.depth - a.depth)
+  for (const c of candidates) {
     if (
-      position.x >= node.position.x &&
-      position.x <= node.position.x + w &&
-      position.y >= node.position.y &&
-      position.y <= node.position.y + h
+      position.x >= c.x &&
+      position.x <= c.x + c.w &&
+      position.y >= c.y &&
+      position.y <= c.y + c.h
     ) {
-      return node
+      return c.node
     }
   }
   return null

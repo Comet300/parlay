@@ -33,6 +33,9 @@ export const CHILD_WIDTH = 176
 export const CHILD_HEIGHT = 48
 export const CONTAINER_MIN_W = CHILD_WIDTH + STACK_PADDING_X * 2
 export const CONTAINER_MIN_H = STACK_PADDING_TOP + STACK_PADDING_BOTTOM
+// Max nesting depth for Group-in-Group (Group can live inside Page/PageGroup,
+// and Group can contain Groups — cap the depth so widths stay bounded).
+export const MAX_GROUP_NEST_DEPTH = 10
 
 // ─── Pure helpers ──────────────────────────────────────────────────────
 
@@ -40,8 +43,17 @@ export const CONTAINER_MIN_H = STACK_PADDING_TOP + STACK_PADDING_BOTTOM
  * Position children in a vertical stack inside their parent containers
  * and auto-size containers to fit. Children are ordered by their current
  * y position (preserving user reorder via drag).
+ *
+ * Three passes:
+ *   1. Compute each container's required WIDTH bottom-up. Innermost
+ *      container = CONTAINER_MIN_W; each wrapping container adds
+ *      2 * STACK_PADDING_X so inner content keeps its width.
+ *   2. Compute each container's required HEIGHT bottom-up from children.
+ *   3. Assign positions + sizes top-down. Leaf children fill 100% of
+ *      their parent's inner width (parent.width - 2 * STACK_PADDING_X).
  */
 function stackChildren(nodes: FlowNode[]): FlowNode[] {
+  const nodesById = new Map(nodes.map((n) => [n.id, n]))
   const childrenByParent = new Map<string, FlowNode[]>()
   for (const node of nodes) {
     if (node.parentId) {
@@ -49,50 +61,100 @@ function stackChildren(nodes: FlowNode[]): FlowNode[] {
       childrenByParent.get(node.parentId)!.push(node)
     }
   }
-
-  // Sort each parent's children by y position (stable order)
   childrenByParent.forEach((children) => {
     children.sort((a, b) => a.position.y - b.position.y)
   })
 
+  // Pass 1: container widths (bottom-up). A container's width is at least
+  // CONTAINER_MIN_W; if it has any container children, its width must
+  // accommodate the widest child plus 2 * STACK_PADDING_X padding.
+  const nodeWidth = new Map<string, number>()
+  function computeWidth(nodeId: string): number {
+    if (nodeWidth.has(nodeId)) return nodeWidth.get(nodeId)!
+    const node = nodesById.get(nodeId)
+    if (!node) return CONTAINER_MIN_W
+    if (!CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)) return CHILD_WIDTH
+    let maxChildContainerW = 0
+    for (const c of childrenByParent.get(nodeId) ?? []) {
+      if (CONTAINER_NODE_TYPES.has(c.data.type as NodeTypeName)) {
+        const cw = computeWidth(c.id)
+        if (cw > maxChildContainerW) maxChildContainerW = cw
+      }
+    }
+    const w = maxChildContainerW > 0
+      ? maxChildContainerW + 2 * STACK_PADDING_X
+      : CONTAINER_MIN_W
+    nodeWidth.set(nodeId, w)
+    return w
+  }
+  for (const node of nodes) {
+    if (CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)) computeWidth(node.id)
+  }
+
+  // Pass 2: container heights (bottom-up).
+  const nodeHeight = new Map<string, number>()
+  function computeHeight(nodeId: string): number {
+    if (nodeHeight.has(nodeId)) return nodeHeight.get(nodeId)!
+    const node = nodesById.get(nodeId)
+    if (!node) return CHILD_HEIGHT
+    if (!CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)) {
+      nodeHeight.set(nodeId, CHILD_HEIGHT)
+      return CHILD_HEIGHT
+    }
+    const children = childrenByParent.get(nodeId) ?? []
+    if (children.length === 0) {
+      nodeHeight.set(nodeId, CONTAINER_MIN_H)
+      return CONTAINER_MIN_H
+    }
+    let total = 0
+    for (const c of children) total += computeHeight(c.id)
+    total += (children.length - 1) * STACK_GAP
+    const h = STACK_PADDING_TOP + total + STACK_PADDING_BOTTOM
+    nodeHeight.set(nodeId, h)
+    return h
+  }
+  for (const node of nodes) computeHeight(node.id)
+
+  // Pass 3: assign positions + sizes. Leaf children fill parent's inner width.
   return nodes.map((node) => {
-    // Resize containers
-    if (CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)) {
-      const children = childrenByParent.get(node.id)
-      const childCount = children?.length ?? 0
-      const neededH = childCount > 0
-        ? STACK_PADDING_TOP + childCount * CHILD_HEIGHT + (childCount - 1) * STACK_GAP + STACK_PADDING_BOTTOM
-        : CONTAINER_MIN_H
+    const isContainer = CONTAINER_NODE_TYPES.has(node.data.type as NodeTypeName)
+    const myWidth = isContainer ? nodeWidth.get(node.id) : undefined
+    const myHeight = isContainer ? nodeHeight.get(node.id) : undefined
+
+    if (node.parentId) {
+      const siblings = childrenByParent.get(node.parentId) ?? []
+      const idx = siblings.indexOf(node)
+      let stackY = STACK_PADDING_TOP
+      for (let i = 0; i < idx; i++) {
+        stackY += (nodeHeight.get(siblings[i].id) ?? CHILD_HEIGHT) + STACK_GAP
+      }
+      const stackX = STACK_PADDING_X
+      const parent = nodesById.get(node.parentId)
+      const parentW = parent ? (nodeWidth.get(parent.id) ?? CONTAINER_MIN_W) : CONTAINER_MIN_W
+
+      if (isContainer) {
+        return {
+          ...node,
+          position: { x: stackX, y: stackY },
+          style: { ...node.style, width: myWidth, height: myHeight },
+          draggable: true,
+        }
+      }
+      // Leaf: fill parent's inner width
+      const leafW = parentW - 2 * STACK_PADDING_X
       return {
         ...node,
-        style: {
-          ...node.style,
-          width: CONTAINER_MIN_W,
-          height: Math.max(CONTAINER_MIN_H, neededH),
-        },
+        position: { x: stackX, y: stackY },
+        style: { ...node.style, width: leafW, height: CHILD_HEIGHT },
+        draggable: true,
       }
     }
 
-    // Snap children to stack positions
-    if (node.parentId) {
-      const siblings = childrenByParent.get(node.parentId)
-      if (siblings) {
-        const index = siblings.indexOf(node)
-        const stackX = STACK_PADDING_X
-        const stackY = STACK_PADDING_TOP + index * (CHILD_HEIGHT + STACK_GAP)
-        if (node.position.x !== stackX || node.position.y !== stackY) {
-          return {
-            ...node,
-            position: { x: stackX, y: stackY },
-            style: { ...node.style, width: CHILD_WIDTH, height: CHILD_HEIGHT },
-            draggable: true, // still draggable for reorder
-          }
-        }
-        return {
-          ...node,
-          style: { ...node.style, width: CHILD_WIDTH, height: CHILD_HEIGHT },
-          draggable: true,
-        }
+    // Root node
+    if (isContainer) {
+      return {
+        ...node,
+        style: { ...node.style, width: myWidth, height: myHeight },
       }
     }
     return node
