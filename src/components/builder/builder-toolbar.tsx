@@ -53,6 +53,7 @@ export function BuilderToolbar({
   const isMobile = useMediaQuery('(max-width: 767px)')
   const isDirty = useBuilderStore((s) => s.isDirty)
   const deadPaths = useBuilderStore((s) => s.deadPaths)
+  const multiOutgoing = useBuilderStore((s) => s.multiOutgoing)
   const aliasConflicts = useBuilderStore((s) => s.aliasConflicts)
   const aliases = useBuilderStore((s) => s.aliases)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -77,6 +78,9 @@ export function BuilderToolbar({
     }
     if (aliasConflicts.length > 0) {
       blockers.push(`${aliasConflicts.length} alias conflict${aliasConflicts.length > 1 ? 's' : ''}`)
+    }
+    if (multiOutgoing.length > 0) {
+      blockers.push(`${multiOutgoing.length} node${multiOutgoing.length > 1 ? 's' : ''} with multiple outgoing edges`)
     }
     const invalidAliases = aliases.filter((a) => !isValidAlias(a.alias))
     if (invalidAliases.length > 0) {
@@ -301,6 +305,22 @@ export function BuilderToolbar({
         >
           <AlertTriangle className="h-3 w-3" />
           {deadPaths.length} dead path{deadPaths.length > 1 ? 's' : ''}
+        </button>
+      )}
+
+      {/* Multiple outgoing edges warning badge */}
+      {multiOutgoing.length > 0 && (
+        <button
+          onClick={() => {
+            const nodeIds = multiOutgoing.map((m) => m.nodeId)
+            const event = new CustomEvent('builder:fitview-nodes', { detail: nodeIds })
+            window.dispatchEvent(event)
+          }}
+          className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 rounded-full px-2 py-0.5 hover:bg-amber-100"
+          title="Click to highlight nodes with multiple outgoing edges"
+        >
+          <AlertTriangle className="h-3 w-3" />
+          {multiOutgoing.length} extra edge{multiOutgoing.length > 1 ? 's' : ''}
         </button>
       )}
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { X, Trash2, Maximize2, Minimize2 } from 'lucide-react'
 import { useBuilderStore } from '~/lib/stores/builder-store'
+import { __handleClickInProgress } from './builder-canvas'
 import { NodeTypeRegistry } from '~/lib/node-registry'
 import { useMediaQuery } from '~/lib/hooks/use-media-query'
 import type { NodeTypeName } from '~/lib/node-registry/types'
@@ -24,12 +25,14 @@ export function NodeConfigPopup() {
   useEffect(() => {
     if (selectedNodeId && selectedNodeId !== prevNodeId.current) {
       prevNodeId.current = selectedNodeId
-      fitView({
-        nodes: [{ id: selectedNodeId }],
-        padding: 0.5,
-        duration: 300,
-        maxZoom: 1,
-      })
+      if (!__handleClickInProgress) {
+        fitView({
+          nodes: [{ id: selectedNodeId }],
+          padding: 0.5,
+          duration: 300,
+          maxZoom: 1,
+        })
+      }
     }
     if (!selectedNodeId) {
       prevNodeId.current = null

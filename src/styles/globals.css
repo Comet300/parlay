@@ -57,6 +57,13 @@ body {
   padding: 0 !important;
 }
 
+/* Connection handles — ensure they sit above node content and are
+   tappable on touch devices for connectOnClick to work. */
+.react-flow__handle {
+  z-index: 10;
+  pointer-events: auto !important;
+}
+
 /* Skeleton preview node — Apple-style soft placeholder.
    A subtle translucent fill with a hairline border. No dashes, no pulse. */
 .react-flow__node-drop_preview {

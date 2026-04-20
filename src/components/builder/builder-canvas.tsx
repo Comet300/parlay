@@ -9,6 +9,7 @@ import {
   type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { Trash2, LayoutGrid } from 'lucide-react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/shallow'
 import { useBuilderStore } from '~/lib/stores/builder-store'
@@ -21,6 +22,10 @@ import { AddNodePanel } from './add-node-panel'
 
 const nodeTypes = getCanvasNodeTypes()
 
+// Module-level flag: true while a handle-click-triggered selection is
+// being undone. The popup reads this to skip its fitView centering.
+export let __handleClickInProgress = false
+
 interface BuilderCanvasProps {
   facetId: string
   settingsOpen?: boolean
@@ -30,7 +35,7 @@ interface BuilderCanvasProps {
 
 
 export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: BuilderCanvasProps) {
-  const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, pushSnapshot, undo, redo, copyNodes, paste, reparentChild, detachNode } = useBuilderStore(
+  const { nodes, edges, onNodesChange, onEdgesChange, setViewport, addEdge, addNode, removeNodes, removeEdges, setNodes, pushSnapshot, undo, redo, copyNodes, paste, reparentChild, detachNode } = useBuilderStore(
     useShallow((s) => ({
       nodes: s.nodes,
       edges: s.edges,
@@ -41,6 +46,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       addNode: s.addNode,
       removeNodes: s.removeNodes,
       removeEdges: s.removeEdges,
+      setNodes: s.setNodes,
       pushSnapshot: s.pushSnapshot,
       undo: s.undo,
       redo: s.redo,
@@ -233,6 +239,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       const sourceNode = nodes.find((n) => n.id === connection.source)
       if (!sourceNode) return
 
+      // Start node is hard-limited to one outgoing edge (per spec).
       if ((sourceNode.type ?? sourceNode.data.type) === 'start') {
         const existing = edges.filter((e) => e.source === connection.source)
         if (existing.length >= 1) {
@@ -816,9 +823,162 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
     return out
   }, [nodes, dropPreview, originPreview])
 
+  // Track pending connect-on-click: when a source handle has been tapped
+  // and we're waiting for the target tap, hide the popup so its backdrop
+  // doesn't block target handles.
+  const [connectPending, setConnectPending] = useState(false)
+
+  const selectedEdges = edges.filter((e) => e.selected)
+
+  function handleDeleteSelectedEdges() {
+    if (selectedEdges.length === 0) return
+    pushSnapshot()
+    removeEdges(selectedEdges.map((e) => e.id))
+  }
+
+  // When a handle (connection dot) is tapped/clicked, prevent the event
+  // from bubbling to the node wrapper — otherwise React Flow selects the
+  // node (which opens our popup) instead of starting a connection.
+  // When a handle (connection dot) is tapped/clicked, React Flow processes
+  // it for connectOnClick AND selects the parent node (opening our popup).
+  // We let the click propagate so connectOnClick works, but immediately
+  // undo the node selection so the popup doesn't block the next handle tap.
+  const handleClickRef = useRef(false)
+
+  const onWrapperClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (target.closest('.react-flow__handle')) {
+      handleClickRef.current = true
+      __handleClickInProgress = true
+      // Deselect the node after React Flow's click processing finishes
+      requestAnimationFrame(() => {
+        if (!handleClickRef.current) return
+        handleClickRef.current = false
+        __handleClickInProgress = false
+        const store = useBuilderStore.getState()
+        const selected = store.nodes.filter((n) => n.selected)
+        if (selected.length > 0) {
+          store.onNodesChange(
+            selected.map((n) => ({ type: 'select' as const, id: n.id, selected: false })),
+          )
+        }
+      })
+    }
+  }, [])
+
+  /**
+   * Auto-arrange: topological BFS from Start left-to-right, assigning
+   * each node to a column (depth from Start). Within each column, nodes
+   * are spaced vertically. Children (content-tier) stay with their
+   * parent containers — only root-level page-tier nodes are repositioned.
+   */
+  function handleAutoArrange() {
+    pushSnapshot()
+
+    // Only arrange root-level (no parentId) page-tier nodes.
+    const rootNodes = nodes.filter((n) => !n.parentId)
+
+    // Build adjacency from edges (source → targets)
+    const adj = new Map<string, string[]>()
+    for (const edge of edges) {
+      if (!adj.has(edge.source)) adj.set(edge.source, [])
+      adj.get(edge.source)!.push(edge.target)
+    }
+
+    // BFS from Start to assign columns (depth)
+    const startNode = rootNodes.find((n) => (n.type ?? n.data.type) === 'start')
+    if (!startNode) return
+
+    const depth = new Map<string, number>()
+    const queue: string[] = [startNode.id]
+    depth.set(startNode.id, 0)
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      const currentDepth = depth.get(current)!
+      for (const target of adj.get(current) ?? []) {
+        if (!depth.has(target) || depth.get(target)! < currentDepth + 1) {
+          depth.set(target, currentDepth + 1)
+          queue.push(target)
+        }
+      }
+    }
+
+    // Any nodes not reachable from Start get placed in a final column
+    const maxDepth = Math.max(0, ...Array.from(depth.values()))
+    for (const n of rootNodes) {
+      if (!depth.has(n.id)) {
+        depth.set(n.id, maxDepth + 1)
+      }
+    }
+
+    // Group nodes by column
+    const columns = new Map<number, FlowNode[]>()
+    for (const n of rootNodes) {
+      const d = depth.get(n.id) ?? 0
+      if (!columns.has(d)) columns.set(d, [])
+      columns.get(d)!.push(n)
+    }
+
+    // Layout constants
+    const COLUMN_GAP = 350
+    const ROW_GAP = 120
+
+    // Assign positions: each column at x = col * COLUMN_GAP.
+    // Within each column, center nodes vertically around y=0.
+    const newPositions = new Map<string, { x: number; y: number }>()
+    for (const [col, colNodes] of columns) {
+      const x = col * COLUMN_GAP
+      const totalHeight = colNodes.reduce((sum, n) => {
+        const h = (n.style?.height as number) ?? 100
+        return sum + h
+      }, 0) + (colNodes.length - 1) * ROW_GAP
+      let y = -totalHeight / 2
+      for (const n of colNodes) {
+        const h = (n.style?.height as number) ?? 100
+        newPositions.set(n.id, { x, y })
+        y += h + ROW_GAP
+      }
+    }
+
+    // Apply new positions to root nodes; children keep their relative positions
+    const updated = nodes.map((n) => {
+      const pos = newPositions.get(n.id)
+      if (pos) return { ...n, position: pos }
+      return n
+    })
+
+    setNodes(updated)
+
+    // Fit the canvas to show everything after arranging
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 400 })
+    }, 50)
+  }
+
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" onClick={onWrapperClick}>
       <AddNodePanel open={!!addNodeOpen} onToggle={onToggleAddNode ?? (() => {})} />
+      {!addNodeOpen && (
+        <button
+          onClick={handleAutoArrange}
+          className="absolute left-[8.5rem] top-3 z-30 flex items-center gap-1.5 rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          title="Auto-arrange nodes"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Arrange
+        </button>
+      )}
+      {selectedEdges.length > 0 && !addNodeOpen && (
+        <button
+          onClick={handleDeleteSelectedEdges}
+          className="absolute left-[16.5rem] top-3 z-30 flex items-center gap-1.5 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-100 transition-colors"
+          title="Delete selected edge"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </button>
+      )}
       <ReactFlow
         nodes={displayNodes}
         edges={edges}
@@ -843,6 +1003,11 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
         deleteKeyCode={null}
         multiSelectionKeyCode="Meta"
         selectNodesOnDrag={false}
+        panOnDrag
+        zoomOnPinch
+        connectOnClick
+        onConnectStart={() => setConnectPending(true)}
+        onConnectEnd={() => setConnectPending(false)}
       >
         <Background />
         <Controls />
@@ -851,7 +1016,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
           maskColor="rgb(0,0,0,0.05)"
         />
       </ReactFlow>
-      <NodeConfigPopup />
+      {!connectPending && <NodeConfigPopup />}
 
       {/* Delete confirmation dialog */}
       {confirmDelete && (

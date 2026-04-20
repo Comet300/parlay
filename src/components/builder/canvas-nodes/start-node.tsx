@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Play } from 'lucide-react'
 import type { FlowNode } from '~/lib/node-registry/types'
 import { stripMarkdown } from './strip-markdown'
 
@@ -17,7 +18,7 @@ export const StartCanvasNode = memo(function StartCanvasNode({
       }`}
     >
       <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <Play className="h-3.5 w-3.5 fill-emerald-500 text-emerald-500" />
         Start
       </div>
       {preview && (
@@ -31,7 +32,7 @@ export const StartCanvasNode = memo(function StartCanvasNode({
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-white"
+        className="!bg-emerald-500 !w-4 !h-4 !border-2 !border-white"
       />
     </div>
   )

@@ -28,7 +28,7 @@ export const LLMCanvasNode = memo(function LLMCanvasNode({
       <Handle
         type="target"
         position={Position.Left}
-        className={`!w-3 !h-3 !border-2 !border-white ${
+        className={`!w-4 !h-4 !border-2 !border-white ${
           isScripted ? '!bg-indigo-500' : '!bg-purple-500'
         }`}
       />
@@ -65,7 +65,7 @@ export const LLMCanvasNode = memo(function LLMCanvasNode({
       <Handle
         type="source"
         position={Position.Right}
-        className={`!w-3 !h-3 !border-2 !border-white ${
+        className={`!w-4 !h-4 !border-2 !border-white ${
           isScripted ? '!bg-indigo-500' : '!bg-purple-500'
         }`}
       />

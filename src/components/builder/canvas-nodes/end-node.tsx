@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Square } from 'lucide-react'
 import type { FlowNode } from '~/lib/node-registry/types'
 import { stripMarkdown } from './strip-markdown'
 
@@ -19,10 +20,10 @@ export const EndCanvasNode = memo(function EndCanvasNode({
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-red-500 !w-3 !h-3 !border-2 !border-white"
+        className="!bg-red-500 !w-4 !h-4 !border-2 !border-white"
       />
       <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
-        <span className="h-2 w-2 rounded-full bg-red-500" />
+        <Square className="h-3 w-3 fill-red-500 text-red-500" />
         End
       </div>
       {preview && (

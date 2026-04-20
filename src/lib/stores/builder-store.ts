@@ -235,6 +235,32 @@ function computeDeadPaths(nodes: FlowNode[], edges: FlowEdge[]): DeadPathInfo[] 
   return result
 }
 
+export interface MultiOutgoingInfo {
+  nodeId: string
+  count: number
+}
+
+function computeMultiOutgoing(nodes: FlowNode[], edges: FlowEdge[]): MultiOutgoingInfo[] {
+  const result: MultiOutgoingInfo[] = []
+  // Count outgoing edges per (source, sourceHandle) pair
+  const handleCounts = new Map<string, number>()
+  for (const edge of edges) {
+    const key = `${edge.source}::${edge.sourceHandle ?? '__default__'}`
+    handleCounts.set(key, (handleCounts.get(key) ?? 0) + 1)
+  }
+  // Group by node: for each node, sum up any handles with >1 outgoing
+  const nodeMax = new Map<string, number>()
+  for (const [key, count] of handleCounts) {
+    if (count <= 1) continue
+    const nodeId = key.split('::')[0]
+    nodeMax.set(nodeId, Math.max(nodeMax.get(nodeId) ?? 0, count))
+  }
+  for (const [nodeId, count] of nodeMax) {
+    result.push({ nodeId, count })
+  }
+  return result
+}
+
 export interface AliasConflict {
   alias: string
   nodeIds: string[]
@@ -270,6 +296,7 @@ function stableArray<T>(prev: T[], next: T[], key?: keyof T): T[] {
 
 // Cache for derived state to avoid new references when content hasn't changed
 let prevDeadPaths: DeadPathInfo[] = []
+let prevMultiOutgoing: MultiOutgoingInfo[] = []
 let prevAliases: AliasInfo[] = []
 let prevAliasConflicts: AliasConflict[] = []
 
@@ -281,16 +308,19 @@ let prevAliasConflicts: AliasConflict[] = []
 function withDerived(partial: { nodes: FlowNode[]; edges?: FlowEdge[] }, currentEdges: FlowEdge[]) {
   const edges = partial.edges ?? currentEdges
   const deadPaths = stableArray(prevDeadPaths, computeDeadPaths(partial.nodes, edges), 'nodeId')
+  const multiOutgoing = stableArray(prevMultiOutgoing, computeMultiOutgoing(partial.nodes, edges), 'nodeId')
   const aliases = stableArray(prevAliases, computeAliases(partial.nodes), 'nodeId')
   const aliasConflicts = stableArray(prevAliasConflicts, computeAliasConflicts(partial.nodes), 'alias')
   const anyPageHasProgressBar = computeAnyPageHasProgressBar(partial.nodes)
   prevDeadPaths = deadPaths
+  prevMultiOutgoing = multiOutgoing
   prevAliases = aliases
   prevAliasConflicts = aliasConflicts
   return {
     ...partial,
     edges,
     deadPaths,
+    multiOutgoing,
     aliases,
     aliasConflicts,
     anyPageHasProgressBar,
@@ -309,6 +339,7 @@ interface BuilderState {
 
   // Derived state (recomputed by withDerived on every nodes/edges mutation)
   deadPaths: DeadPathInfo[]
+  multiOutgoing: MultiOutgoingInfo[]
   aliases: AliasInfo[]
   aliasConflicts: AliasConflict[]
   anyPageHasProgressBar: boolean
@@ -355,6 +386,7 @@ export const useBuilderStore = create<BuilderState>()(devtools<BuilderState>((se
   colorScheme: null,
   isDirty: false,
   deadPaths: [],
+  multiOutgoing: [],
   aliases: [],
   aliasConflicts: [],
   anyPageHasProgressBar: false,

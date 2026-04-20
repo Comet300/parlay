@@ -35,20 +35,36 @@ export const CardCanvasNode = memo(function CardCanvasNode({
         </p>
       </div>
 
-      {/* Button handles */}
-      {d.buttons.map((btn, i) => (
-        <Handle
-          key={btn.id}
-          type="source"
-          id={`button-${btn.id}`}
-          position={Position.Right}
-          style={{ top: `${30 + i * 20}%` }}
-          className={`!w-2 !h-2 !border !border-white ${
-            deadHandles.has(`button-${btn.id}`) ? '!bg-red-500' : '!bg-orange-500'
-          }`}
-          title={btn.label}
-        />
-      ))}
+      {/* Button handles — evenly spaced, distinct colors */}
+      {d.buttons.map((btn, i) => {
+        const count = d.buttons.length
+        // Distribute handles evenly from 20% to 80% of the node height
+        const pct = count === 1 ? 50 : 20 + (i / (count - 1)) * 60
+        const colors = [
+          '!bg-blue-500',
+          '!bg-emerald-500',
+          '!bg-amber-500',
+          '!bg-violet-500',
+          '!bg-rose-500',
+          '!bg-cyan-500',
+          '!bg-orange-500',
+          '!bg-teal-500',
+        ]
+        const color = deadHandles.has(`button-${btn.id}`)
+          ? '!bg-red-500'
+          : colors[i % colors.length]
+        return (
+          <Handle
+            key={btn.id}
+            type="source"
+            id={`button-${btn.id}`}
+            position={Position.Right}
+            style={{ top: `${pct}%` }}
+            className={`!w-3.5 !h-3.5 !border-2 !border-white ${color}`}
+            title={btn.label}
+          />
+        )
+      })}
     </div>
   )
 })

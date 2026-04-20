@@ -17,7 +17,7 @@ export const PageCanvasNode = memo(function PageCanvasNode({
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-blue-500 !w-3 !h-3 !border-2 !border-white"
+        className="!bg-blue-500 !w-4 !h-4 !border-2 !border-white"
       />
       <div className="flex items-center gap-2 px-3 py-2 border-b border-blue-200 bg-blue-100/50 rounded-t-[10px]">
         <FileText className="h-3.5 w-3.5 text-blue-600" />
@@ -32,7 +32,7 @@ export const PageCanvasNode = memo(function PageCanvasNode({
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-blue-500 !w-3 !h-3 !border-2 !border-white"
+        className="!bg-blue-500 !w-4 !h-4 !border-2 !border-white"
       />
     </div>
   )

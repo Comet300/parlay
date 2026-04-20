@@ -17,7 +17,7 @@ export const PageGroupCanvasNode = memo(function PageGroupCanvasNode({
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-violet-500 !w-3 !h-3 !border-2 !border-white"
+        className="!bg-violet-500 !w-4 !h-4 !border-2 !border-white"
       />
       <div className="flex items-center gap-2 px-3 py-2 border-b border-violet-200 bg-violet-100/50 rounded-t-[10px]">
         <Layers className="h-3.5 w-3.5 text-violet-600" />
@@ -34,7 +34,7 @@ export const PageGroupCanvasNode = memo(function PageGroupCanvasNode({
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-violet-500 !w-3 !h-3 !border-2 !border-white"
+        className="!bg-violet-500 !w-4 !h-4 !border-2 !border-white"
       />
     </div>
   )
