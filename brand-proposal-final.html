@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parlay — Brand Identity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ── Color ── */
+  --primary: #0EA5E9;
+  --primary-hover: #0284C7;
+  --primary-light: #38BDF8;
+  --primary-subtle: #F0F9FF;
+  --accent: #F97316;
+  --accent-hover: #EA580C;
+  --accent-subtle: #FFF7ED;
+  --surface: #FFFFFF;
+  --bg: #FAFAF9;
+  --border: #E7E5E4;
+  --border-light: #F5F5F4;
+  --text: #292524;
+  --text-muted: #78716C;
+  --text-faint: #A8A29E;
+  --stone-900: #1C1917;
+  --stone-300: #D6D3D1;
+  --stone-200: #E7E5E4;
+  --success: #10B981;
+  --success-subtle: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-subtle: #FFFBEB;
+  --error: #EF4444;
+  --error-subtle: #FEF2F2;
+
+  /* ── Radius ── */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* ── Elevation ── */
+  --e0: none;
+  --e1: 0 1px 2px rgba(0,0,0,0.03);
+  --e2: 0 2px 6px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+  --e3: 0 6px 16px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+  --e4: 0 16px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
+  --e-toast: 0 4px 12px rgba(0,0,0,0.07);
+
+  /* ── Motion ── */
+  --d-instant: 100ms;
+  --d-fast: 150ms;
+  --d-base: 200ms;
+  --d-med: 300ms;
+  --d-slow: 400ms;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Sora', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  line-height: 1.55; -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+*:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ═══ HERO ═══ */
+.hero {
+  background: linear-gradient(145deg, #0369A1 0%, #0EA5E9 45%, #38BDF8 100%);
+  color: white; padding: 80px 32px 72px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.08) 0%, transparent 60%),
+              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
+}
+.hero * { position: relative; }
+.hero-eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  opacity: 0.75; margin-bottom: 14px;
+}
+.hero h1 { font-size: 56px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+.hero h1 span { color: rgba(255,255,255,0.55); }
+.hero-sub { font-size: 17px; opacity: 0.82; max-width: 440px; margin: 18px auto 0; line-height: 1.6; font-weight: 400; }
+.hero-tags { display: flex; gap: 8px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
+.hero-tag {
+  background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.18); border-radius: 999px;
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+}
+
+/* ═══ SECTION ═══ */
+.s { max-width: 960px; margin: 0 auto; padding: 60px 28px; }
+.s-title { font-size: 26px; font-weight: 800; letter-spacing: -0.028em; margin-bottom: 6px; }
+.s-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 36px; max-width: 560px; line-height: 1.6; }
+.divider { height: 1px; background: var(--border); margin: 0 auto; max-width: 960px; }
+.h-sub {
+  font-size: 11px; font-weight: 700; margin-bottom: 14px; margin-top: 32px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint);
+}
+.mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ═══ PALETTE ═══ */
+.pal { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px,1fr)); gap: 12px; }
+.sw { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+.sw .c { height: 68px; }
+.sw .i { padding: 9px 11px; }
+.sw .n { font-size: 12px; font-weight: 600; }
+.sw .h { font-size: 10px; color: var(--text-faint); font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* ═══ TYPOGRAPHY ═══ */
+.ts { display: flex; flex-direction: column; gap: 12px; }
+.tr {
+  display: flex; align-items: baseline; gap: 20px;
+  padding: 16px 18px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+}
+.tr .m { min-width: 110px; flex-shrink: 0; }
+.tr .m .l { font-size: 10px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; }
+.tr .m .sp { font-size: 10px; color: var(--text-faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* ═══ BUTTONS (Raised — final) ═══ */
+.bg { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.b {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 16px; height: 38px; border-radius: var(--r);
+  font-size: 14px; font-weight: 600; font-family: inherit;
+  border: none; cursor: pointer; position: relative;
+  transition: transform var(--d-instant) var(--ease-out), box-shadow var(--d-base);
+  letter-spacing: -0.005em;
+}
+.b:active { transform: translateY(1px); }
+.b-p {
+  background: linear-gradient(180deg, #38BDF8 0%, #0EA5E9 100%); color: white;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 0 #0369A1, 0 2px 4px rgba(14,165,233,0.3);
+}
+.b-p:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 0 #0369A1, 0 4px 12px rgba(14,165,233,0.4); }
+.b-s {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFAF9 100%); color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 0 var(--border), 0 2px 4px rgba(0,0,0,0.05), inset 0 0 0 1px var(--border);
+}
+.b-s:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 0 var(--border), 0 3px 8px rgba(0,0,0,0.08), inset 0 0 0 1px #D6D3D1; }
+.b-a {
+  background: linear-gradient(180deg, #FB923C 0%, #F97316 100%); color: white;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 0 #C2410C, 0 2px 4px rgba(249,115,22,0.3);
+}
+.b-a:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 0 #C2410C, 0 4px 12px rgba(249,115,22,0.4); }
+.b-d {
+  background: linear-gradient(180deg, #FEF2F2 0%, #FEE2E2 100%); color: var(--error);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 0 #FECACA, inset 0 0 0 1px #FECACA;
+}
+.b-d:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 0 #FECACA, 0 3px 8px rgba(239,68,68,0.2), inset 0 0 0 1px #FCA5A5; }
+.b-g { background: transparent; color: var(--text-muted); box-shadow: none; }
+.b-g:hover { background: var(--border-light); color: var(--text); }
+
+/* ═══ INPUTS ═══ */
+.inp {
+  height: 38px; padding: 0 12px; border: 1.5px solid var(--border); border-radius: var(--r);
+  font-size: 14px; font-family: inherit; color: var(--text); background: white;
+  outline: none; transition: border-color var(--d-fast), box-shadow var(--d-fast); width: 220px;
+}
+.inp:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px var(--primary-subtle); }
+.inp::placeholder { color: var(--text-faint); }
+.ta { min-height: 80px; padding: 10px 12px; resize: vertical; line-height: 1.5; width: 100%; max-width: 320px; }
+
+/* ═══ FORM CONTROLS ═══ */
+.ck { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; user-select: none; }
+.ck-b { width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 6px; background: white; transition: all var(--d-fast); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.ck input { position: absolute; opacity: 0; pointer-events: none; }
+.ck input:checked ~ .ck-b { background: var(--primary); border-color: var(--primary); }
+.ck input:checked ~ .ck-b::after { content: ''; width: 10px; height: 10px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") center/contain no-repeat; }
+.ck input:focus-visible ~ .ck-b { box-shadow: 0 0 0 3px var(--primary-subtle); }
+
+.rd-b { width: 18px; height: 18px; border: 1.5px solid var(--border); border-radius: 50%; background: white; transition: all var(--d-fast); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.ck input:checked ~ .rd-b { border-color: var(--primary); }
+.ck input:checked ~ .rd-b::after { content: ''; width: 8px; height: 8px; background: var(--primary); border-radius: 50%; }
+
+.tg { position: relative; width: 36px; height: 20px; background: var(--stone-300); border-radius: 999px; cursor: pointer; transition: background var(--d-fast); flex-shrink: 0; }
+.tg::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform var(--d-fast) var(--ease-out); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.tg input { position: absolute; opacity: 0; pointer-events: none; }
+.tg.on { background: var(--primary); }
+.tg.on::after { transform: translateX(16px); }
+
+.sel {
+  height: 38px; padding: 0 36px 0 12px; border: 1.5px solid var(--border); border-radius: var(--r);
+  font-size: 14px; font-family: inherit; color: var(--text); background: white;
+  appearance: none; -webkit-appearance: none; cursor: pointer; width: 220px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2378716C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+  transition: border-color var(--d-fast), box-shadow var(--d-fast);
+}
+.sel:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px var(--primary-subtle); }
+
+/* ═══ CARDS ═══ */
+.cg { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 14px; }
+.cd {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r-lg);
+  padding: 18px; box-shadow: var(--e1); transition: all var(--d-base) var(--ease-out);
+}
+.cd:hover { box-shadow: var(--e3); transform: translateY(-1px); border-color: #D6D3D1; }
+.cd-t { font-size: 15px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+.cd-d { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+.badge {
+  display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: var(--r-pill);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.badge-ok { background: var(--success-subtle); color: #059669; }
+.badge-dr { background: var(--primary-subtle); color: var(--primary); }
+.badge-w { background: var(--warning-subtle); color: #B45309; }
+
+/* ═══ TOASTS ═══ */
+.toast-r { display: flex; flex-wrap: wrap; gap: 10px; }
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; background: white; border: 1px solid var(--border);
+  border-radius: var(--r-md); box-shadow: var(--e-toast); font-size: 13px; font-weight: 500;
+}
+.toast .bar { width: 3px; height: 18px; border-radius: 2px; flex-shrink: 0; }
+
+/* ═══ OVERLAYS ═══ */
+.ov-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; }
+@media (max-width:720px) { .ov-grid { grid-template-columns: 1fr; } }
+.modal-demo {
+  background: white; border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--e4); padding: 22px; position: relative;
+}
+.modal-demo::before { content: ''; position: absolute; inset: -18px; background: rgba(0,0,0,0.06); border-radius: calc(var(--r-lg) + 6px); z-index: -1; }
+.modal-t { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 4px; }
+.modal-d { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+.popover-demo {
+  background: white; border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--e3); padding: 14px;
+}
+.popover-demo .k { font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.popover-demo .v { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.tooltip-demo {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--stone-900); color: white; padding: 6px 10px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; position: relative;
+}
+.tooltip-demo::after {
+  content: ''; position: absolute; bottom: -4px; left: 20px;
+  width: 8px; height: 8px; background: var(--stone-900); transform: rotate(45deg);
+}
+
+/* ═══ CANVAS PREVIEW ═══ */
+.canvas {
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--r-lg);
+  padding: 40px 24px; background-image: radial-gradient(circle, #D6D3D1 0.8px, transparent 0.8px);
+  background-size: 18px 18px;
+}
+.nr { display: flex; align-items: center; gap: 20px; justify-content: center; flex-wrap: wrap; }
+.nd {
+  position: relative; border-radius: var(--r-md); border: 2px solid; min-width: 150px;
+  box-shadow: var(--e2); background: white;
+}
+.nd-h {
+  display: flex; align-items: center; gap: 7px; padding: 9px 12px;
+  border-bottom: 1px solid; border-radius: 12px 12px 0 0; font-size: 12px; font-weight: 700;
+}
+.nd-b { padding: 9px 12px; font-size: 11px; min-height: 28px; font-weight: 500; }
+.handle {
+  position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  border: 2.5px solid white; top: 50%; transform: translateY(-50%);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.hl { left: -9px; } .hr { right: -9px; }
+.edge { height: 2.5px; width: 48px; background: var(--text-faint); border-radius: 2px; flex-shrink: 0; }
+.edge-sel { background: var(--accent); height: 3px; }
+
+.nd-start { border-color: #86EFAC; background: #F0FDF4; }
+.nd-start .nd-h { border-color: #BBF7D0; background: #DCFCE7; color: #166534; }
+.nd-start .handle { background: var(--success); }
+.nd-page { border-color: #7DD3FC; background: var(--primary-subtle); }
+.nd-page .nd-h { border-color: #BAE6FD; background: #E0F2FE; color: #0C4A6E; }
+.nd-page .handle { background: var(--primary); }
+.nd-end { border-color: #FCA5A5; background: var(--error-subtle); }
+.nd-end .nd-h { border-color: #FECACA; background: #FEE2E2; color: #991B1B; }
+.nd-end .handle { background: var(--error); }
+
+/* ═══ SHELL ═══ */
+.shell { display: flex; border: 1.5px solid var(--border); border-radius: var(--r-lg); overflow: hidden; height: 340px; background: var(--surface); }
+.shell-sb { width: 200px; border-right: 1px solid var(--border); background: white; padding: 18px 10px; display: flex; flex-direction: column; gap: 2px; }
+.shell-logo { font-size: 18px; font-weight: 800; color: var(--primary); letter-spacing: -0.03em; padding: 0 8px; margin-bottom: 22px; }
+.shell-ni { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r); font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all var(--d-fast); }
+.shell-ni:hover { background: var(--bg); color: var(--text); }
+.shell-ni.act { background: var(--primary-subtle); color: var(--primary); font-weight: 600; }
+.shell-ico { width: 16px; height: 16px; border-radius: var(--r-xs); background: currentColor; opacity: 0.25; }
+.shell-ni.act .shell-ico { opacity: 0.5; }
+.shell-m { flex: 1; background: var(--bg); padding: 24px; }
+.shell-m h3 { font-size: 22px; font-weight: 800; letter-spacing: -0.028em; margin-bottom: 4px; }
+.shell-m p { font-size: 13px; color: var(--text-muted); }
+
+/* ═══ TOKENS ═══ */
+.tok-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 12px; }
+.tok { background: white; border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px; }
+.tok .n { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.tok .v { font-size: 10px; color: var(--text-faint); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+.tok-swatch { height: 56px; background: white; border-radius: var(--r-md); }
+.tok-radius { height: 56px; background: var(--primary-subtle); border: 2px solid var(--primary); }
+
+/* ═══ SPACING ═══ */
+.sp-g { display: flex; gap: 10px; align-items: flex-end; }
+.sp-b { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sp-bar { background: var(--primary); border-radius: var(--r-xs); width: 36px; opacity: 0.55; }
+.sp-l { font-size: 10px; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* ═══ MOTION ═══ */
+.mo-g { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.mo-b { width: 56px; height: 56px; border-radius: var(--r-md); cursor: pointer; transition: transform var(--d-med) var(--ease-out), box-shadow var(--d-med); }
+.mo-b:hover { transform: scale(1.06); box-shadow: 0 8px 20px rgba(14,165,233,0.25); }
+.mo-b:active { transform: scale(0.96); }
+.mo-l { font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 6px; font-weight: 500; }
+
+/* ═══ LOADING ═══ */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shim { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.spinner {
+  width: 20px; height: 20px; border: 2.5px solid var(--primary-subtle);
+  border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+.skeleton {
+  background: linear-gradient(90deg, #F5F5F4 0%, #FAFAF9 50%, #F5F5F4 100%);
+  background-size: 200% 100%; animation: shim 1.4s linear infinite; border-radius: var(--r);
+}
+.progress { width: 100%; max-width: 320px; height: 4px; background: var(--stone-200); border-radius: var(--r-pill); overflow: hidden; }
+.progress-fill { height: 100%; background: var(--primary); width: 58%; border-radius: var(--r-pill); transition: width var(--d-base); }
+
+/* ═══ EMPTY ═══ */
+.empty { text-align: center; padding: 48px 24px; background: white; border: 1.5px dashed var(--border); border-radius: var(--r-lg); }
+.empty-icon { width: 48px; height: 48px; color: var(--stone-300); margin: 0 auto 14px; }
+.empty-t { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 4px; }
+.empty-d { font-size: 14px; color: var(--text-muted); margin-bottom: 18px; max-width: 320px; margin-left: auto; margin-right: auto; }
+
+/* ═══ TABLE ═══ */
+.tbl { width: 100%; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: white; }
+.tbl table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl thead th { background: var(--bg); text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+.tbl tbody tr { transition: background var(--d-fast); }
+.tbl tbody tr:hover { background: rgba(240,249,255,0.4); }
+.tbl tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+
+/* ═══ TONE ═══ */
+.tone { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width:640px) { .tone { grid-template-columns: 1fr; } }
+.tone-c { padding: 14px 16px; border-radius: var(--r-md); font-size: 13px; }
+.tone-bad { background: var(--error-subtle); border: 1px solid #FECACA; color: #991B1B; }
+.tone-good { background: var(--success-subtle); border: 1px solid #BBF7D0; color: #065F46; }
+.tone-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; opacity: 0.7; }
+
+/* ═══ LOGO ═══ */
+.logo-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 14px; }
+.logo-c { background: white; border: 1px solid var(--border); border-radius: var(--r-md); padding: 24px; text-align: center; }
+.logo-c .cap { font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 14px; }
+
+/* ═══ OG ═══ */
+.og {
+  position: relative; width: 100%; max-width: 640px; aspect-ratio: 1200/630;
+  background: linear-gradient(145deg, #0369A1 0%, #0EA5E9 50%, #38BDF8 100%);
+  border-radius: var(--r-md); overflow: hidden; box-shadow: var(--e3);
+  padding: 48px; display: flex; flex-direction: column; justify-content: flex-end;
+}
+.og::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.18) 1.2px, transparent 1.2px);
+  background-size: 28px 28px; mask-image: linear-gradient(to left, black 20%, transparent 60%);
+}
+.og * { position: relative; z-index: 1; }
+.og-mark { font-size: 54px; font-weight: 800; color: white; letter-spacing: -0.04em; line-height: 1; }
+.og-tag { font-size: 19px; color: rgba(255,255,255,0.8); margin-top: 8px; font-weight: 400; }
+
+/* ═══ EMAIL ═══ */
+.email {
+  background: white; border: 1px solid var(--border); border-radius: var(--r-md);
+  max-width: 520px; overflow: hidden; box-shadow: var(--e1);
+}
+.email-h { padding: 20px 24px; border-bottom: 1px solid var(--border-light); }
+.email-logo { font-size: 18px; font-weight: 800; color: var(--primary); letter-spacing: -0.03em; }
+.email-b { padding: 28px 24px; font-size: 14px; line-height: 1.6; color: var(--text); }
+.email-b p { margin-bottom: 14px; }
+.email-cta {
+  display: inline-block; background: var(--primary); color: white; padding: 11px 22px;
+  border-radius: var(--r); font-weight: 600; text-decoration: none; margin: 8px 0;
+}
+.email-f { padding: 16px 24px; background: var(--bg); font-size: 11px; color: var(--text-faint); text-align: center; line-height: 1.5; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width:640px) {
+  .hero { padding: 52px 20px 44px; }
+  .hero h1 { font-size: 38px; }
+  .s { padding: 40px 20px; }
+  .shell { flex-direction: column; height: auto; }
+  .shell-sb { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Brand Identity System</div>
+  <h1>Parlay<span>.</span></h1>
+  <p class="hero-sub">Visual research flow builder. Friendly, clear, warm.</p>
+  <div class="hero-tags">
+    <span class="hero-tag">Sky Blue + Orange</span>
+    <span class="hero-tag">Sora</span>
+    <span class="hero-tag">Warm Stone Neutrals</span>
+  </div>
+</div>
+
+<!-- ═══ LOGO ═══ -->
+<div class="s">
+  <div class="s-title">Logo &amp; Mark</div>
+  <p class="s-sub">Three directions. All favor simplicity — the mark should work at 16px favicon size and beside &quot;parlay&quot; at button scale.</p>
+  <div class="logo-g">
+    <div class="logo-c">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <path d="M20 42 Q20 22 38 22 Q58 22 58 40" stroke="#0EA5E9" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M24 58 Q44 58 44 42 Q44 22 60 22" stroke="#F97316" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.9"/>
+      </svg>
+      <div class="cap">A · Conversation</div>
+    </div>
+    <div class="logo-c">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="28" cy="40" r="16" fill="#0EA5E9"/>
+        <circle cx="56" cy="40" r="8" fill="#F97316"/>
+        <line x1="44" y1="40" x2="48" y2="40" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <div class="cap">B · Node + Handle</div>
+    </div>
+    <div class="logo-c">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <rect x="14" y="30" width="52" height="20" rx="10" fill="#0EA5E9"/>
+        <circle cx="66" cy="40" r="6" fill="#F97316" stroke="white" stroke-width="2"/>
+      </svg>
+      <div class="cap">C · Pill + Handle</div>
+    </div>
+    <div class="logo-c" style="display:flex;align-items:center;justify-content:center;gap:10px">
+      <svg width="32" height="32" viewBox="0 0 80 80">
+        <path d="M20 42 Q20 22 38 22 Q58 22 58 40" stroke="#0EA5E9" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <path d="M24 58 Q44 58 44 42 Q44 22 60 22" stroke="#F97316" stroke-width="8" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span style="font-size:26px;font-weight:800;letter-spacing:-0.04em">parlay<span style="color:var(--accent)">.</span></span>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--text-faint);margin-top:18px">Recommend A — two curves meeting. Literal enough to hint at dialogue, abstract enough to scale.</p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ PALETTE ═══ -->
+<div class="s">
+  <div class="s-title">Color Palette</div>
+  <p class="s-sub">Sky blue primary with warm orange accent. Stone neutrals keep everything feeling human, not clinical.</p>
+  <div class="pal">
+    <div class="sw"><div class="c" style="background:#0EA5E9"></div><div class="i"><div class="n">Primary</div><div class="h">#0EA5E9</div></div></div>
+    <div class="sw"><div class="c" style="background:#0284C7"></div><div class="i"><div class="n">Primary Hover</div><div class="h">#0284C7</div></div></div>
+    <div class="sw"><div class="c" style="background:#F0F9FF"></div><div class="i"><div class="n">Primary Subtle</div><div class="h">#F0F9FF</div></div></div>
+    <div class="sw"><div class="c" style="background:#F97316"></div><div class="i"><div class="n">Accent</div><div class="h">#F97316</div></div></div>
+    <div class="sw"><div class="c" style="background:#FFF7ED"></div><div class="i"><div class="n">Accent Subtle</div><div class="h">#FFF7ED</div></div></div>
+    <div class="sw"><div class="c" style="background:#FAFAF9"></div><div class="i"><div class="n">Background</div><div class="h">#FAFAF9</div></div></div>
+    <div class="sw"><div class="c" style="background:#E7E5E4"></div><div class="i"><div class="n">Border</div><div class="h">#E7E5E4</div></div></div>
+    <div class="sw"><div class="c" style="background:#292524"></div><div class="i"><div class="n">Text</div><div class="h">#292524</div></div></div>
+    <div class="sw"><div class="c" style="background:#78716C"></div><div class="i"><div class="n">Text Muted</div><div class="h">#78716C</div></div></div>
+    <div class="sw"><div class="c" style="background:#10B981"></div><div class="i"><div class="n">Success</div><div class="h">#10B981</div></div></div>
+    <div class="sw"><div class="c" style="background:#F59E0B"></div><div class="i"><div class="n">Warning</div><div class="h">#F59E0B</div></div></div>
+    <div class="sw"><div class="c" style="background:#EF4444"></div><div class="i"><div class="n">Error</div><div class="h">#EF4444</div></div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ TYPOGRAPHY ═══ -->
+<div class="s">
+  <div class="s-title">Typography</div>
+  <p class="s-sub">Sora — geometric humanist sans. 5 weights, Google Fonts.</p>
+  <div class="ts">
+    <div class="tr"><div class="m"><div class="l">Display</div><div class="sp">32 / 800 / -0.032em</div></div><div style="font-size:32px;font-weight:800;letter-spacing:-0.032em">Parlay Dashboard</div></div>
+    <div class="tr"><div class="m"><div class="l">Title</div><div class="sp">22 / 700 / -0.022em</div></div><div style="font-size:22px;font-weight:700;letter-spacing:-0.022em">Node Config Popup</div></div>
+    <div class="tr"><div class="m"><div class="l">Subtitle</div><div class="sp">15 / 700</div></div><div style="font-size:15px;font-weight:700">Page-tier Nodes</div></div>
+    <div class="tr"><div class="m"><div class="l">Body</div><div class="sp">14 / 400</div></div><div style="font-size:14px;font-weight:400">Enter your email address to continue.</div></div>
+    <div class="tr"><div class="m"><div class="l">Small</div><div class="sp">12 / 500</div></div><div style="font-size:12px;font-weight:500;color:var(--text-muted)">Card &middot; 2 btns &middot; Draft</div></div>
+    <div class="tr"><div class="m"><div class="l">Micro</div><div class="sp">10 / 600 / 0.06em</div></div><div style="font-size:10px;font-weight:600;letter-spacing:0.06em;color:var(--text-faint);text-transform:uppercase">Content-tier &middot; Likert</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ TOKENS ═══ -->
+<div class="s">
+  <div class="s-title">Design Tokens</div>
+  <p class="s-sub">Named scales for radius, elevation, motion, and z-index. Use tokens everywhere — no magic numbers in components.</p>
+
+  <div class="h-sub">Radius</div>
+  <div class="tok-g">
+    <div class="tok"><div class="tok-radius" style="border-radius:4px"></div><div style="margin-top:10px"><div class="n">--r-xs</div><div class="v">4px</div></div></div>
+    <div class="tok"><div class="tok-radius" style="border-radius:8px"></div><div style="margin-top:10px"><div class="n">--r-sm</div><div class="v">8px</div></div></div>
+    <div class="tok"><div class="tok-radius" style="border-radius:10px"></div><div style="margin-top:10px"><div class="n">--r &middot; buttons, inputs</div><div class="v">10px</div></div></div>
+    <div class="tok"><div class="tok-radius" style="border-radius:14px"></div><div style="margin-top:10px"><div class="n">--r-md &middot; nodes</div><div class="v">14px</div></div></div>
+    <div class="tok"><div class="tok-radius" style="border-radius:20px"></div><div style="margin-top:10px"><div class="n">--r-lg &middot; cards</div><div class="v">20px</div></div></div>
+    <div class="tok"><div class="tok-radius" style="border-radius:999px"></div><div style="margin-top:10px"><div class="n">--r-pill</div><div class="v">999px</div></div></div>
+  </div>
+
+  <div class="h-sub" style="margin-top:36px">Elevation</div>
+  <div class="tok-g">
+    <div class="tok"><div class="tok-swatch" style="box-shadow:var(--e0);border:1px solid var(--border-light)"></div><div style="margin-top:10px"><div class="n">--e0 · flat</div><div class="v">none</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="box-shadow:var(--e1)"></div><div style="margin-top:10px"><div class="n">--e1 · cards</div><div class="v">1px · 2px</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="box-shadow:var(--e2)"></div><div style="margin-top:10px"><div class="n">--e2 · nodes</div><div class="v">2px · 6px</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="box-shadow:var(--e3)"></div><div style="margin-top:10px"><div class="n">--e3 · popovers</div><div class="v">6px · 16px</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="box-shadow:var(--e4)"></div><div style="margin-top:10px"><div class="n">--e4 · modals</div><div class="v">16px · 40px</div></div></div>
+  </div>
+
+  <div class="h-sub" style="margin-top:36px">Motion</div>
+  <div class="tok-g">
+    <div class="tok"><div class="tok-swatch" style="background:var(--primary);height:32px;border-radius:var(--r-md);transition:transform 100ms var(--ease-out)" onmouseover="this.style.transform='translateX(12px)'" onmouseout="this.style.transform='translateX(0)'"></div><div style="margin-top:10px"><div class="n">--d-instant · tap</div><div class="v">100ms</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="background:var(--primary);height:32px;border-radius:var(--r-md);transition:transform 150ms var(--ease-out)" onmouseover="this.style.transform='translateX(12px)'" onmouseout="this.style.transform='translateX(0)'"></div><div style="margin-top:10px"><div class="n">--d-fast · hover</div><div class="v">150ms</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="background:var(--primary);height:32px;border-radius:var(--r-md);transition:transform 200ms var(--ease-out)" onmouseover="this.style.transform='translateX(12px)'" onmouseout="this.style.transform='translateX(0)'"></div><div style="margin-top:10px"><div class="n">--d-base · states</div><div class="v">200ms</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="background:var(--primary);height:32px;border-radius:var(--r-md);transition:transform 300ms var(--ease-out)" onmouseover="this.style.transform='translateX(12px)'" onmouseout="this.style.transform='translateX(0)'"></div><div style="margin-top:10px"><div class="n">--d-med · panels</div><div class="v">300ms</div></div></div>
+    <div class="tok"><div class="tok-swatch" style="background:var(--primary);height:32px;border-radius:var(--r-md);transition:transform 400ms var(--ease-out)" onmouseover="this.style.transform='translateX(12px)'" onmouseout="this.style.transform='translateX(0)'"></div><div style="margin-top:10px"><div class="n">--d-slow · pages</div><div class="v">400ms</div></div></div>
+  </div>
+  <p style="font-size:12px;color:var(--text-faint);margin-top:14px">Hover a bar to see its duration. Easing: <span class="mono">cubic-bezier(0.32, 0.72, 0, 1)</span> — Apple's ease-out. Framer springs: <span class="mono">snap</span> {340/34/0.9}, <span class="mono">gentle</span> {200/26/1}.</p>
+
+  <div class="h-sub" style="margin-top:36px">Z-index</div>
+  <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text-muted);background:white;border:1px solid var(--border);border-radius:var(--r-md);padding:18px;line-height:1.8">
+    <div><span style="color:var(--text)">base</span>              0</div>
+    <div><span style="color:var(--text)">canvas-handle</span>     10</div>
+    <div><span style="color:var(--text)">dropdown</span>         100</div>
+    <div><span style="color:var(--text)">sticky</span>           200</div>
+    <div><span style="color:var(--text)">popover</span>          300</div>
+    <div><span style="color:var(--text)">modal-backdrop</span>   400</div>
+    <div><span style="color:var(--text)">modal</span>            410</div>
+    <div><span style="color:var(--text)">toast</span>            500</div>
+    <div><span style="color:var(--text)">tooltip</span>          600</div>
+  </div>
+
+  <div class="h-sub" style="margin-top:36px">Spacing (4px grid)</div>
+  <div class="sp-g">
+    <div class="sp-b"><div class="sp-bar" style="height:4px"></div><div class="sp-l">4</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:8px"></div><div class="sp-l">8</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:12px"></div><div class="sp-l">12</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:16px"></div><div class="sp-l">16</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:24px"></div><div class="sp-l">24</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:32px"></div><div class="sp-l">32</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:48px"></div><div class="sp-l">48</div></div>
+    <div class="sp-b"><div class="sp-bar" style="height:64px"></div><div class="sp-l">64</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ COMPONENTS ═══ -->
+<div class="s">
+  <div class="s-title">Components</div>
+  <p class="s-sub">Raised buttons, soft inputs, form controls, badges, cards, toasts. Rounded corners, 1.5px borders, 600+ weight for labels.</p>
+
+  <div class="h-sub">Buttons (Raised)</div>
+  <div class="bg">
+    <button class="b b-p">Publish</button>
+    <button class="b b-s">Unpublish</button>
+    <button class="b b-a">New Form</button>
+    <button class="b b-d">&#x1F5D1; Delete</button>
+    <button class="b b-g">Settings</button>
+  </div>
+
+  <div class="h-sub">Inputs</div>
+  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted)">Form title</label>
+      <input class="inp" placeholder="My Research Study" />
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted)">Facet</label>
+      <select class="sel"><option>Default</option><option>Variant A</option><option>Variant B</option></select>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Description</label>
+    <textarea class="inp ta" placeholder="Explain what respondents can expect..."></textarea>
+  </div>
+
+  <div class="h-sub">Checkboxes, radios, toggles</div>
+  <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:center">
+    <label class="ck"><input type="checkbox" checked><span class="ck-b"></span>Required</label>
+    <label class="ck"><input type="checkbox"><span class="ck-b"></span>Shuffle options</label>
+    <label class="ck"><input type="radio" name="r1" checked><span class="rd-b"></span>Single choice</label>
+    <label class="ck"><input type="radio" name="r1"><span class="rd-b"></span>Multi-select</label>
+    <label class="ck"><span class="tg on" onclick="this.classList.toggle('on')"></span>Active</label>
+    <label class="ck"><span class="tg" onclick="this.classList.toggle('on')"></span>Round-robin</label>
+  </div>
+
+  <div class="h-sub">Badges</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <span class="badge badge-ok">Active</span>
+    <span class="badge badge-dr">Draft</span>
+    <span class="badge badge-w">2 dead paths</span>
+    <span class="badge" style="background:var(--accent-subtle);color:#C2410C">1 extra edge</span>
+  </div>
+
+  <div class="h-sub">Cards</div>
+  <div class="cg">
+    <div class="cd">
+      <div class="cd-t">User Onboarding Study</div>
+      <div class="cd-d">12 questions across 4 pages. Round-robin with 3 facets.</div>
+      <span class="badge badge-ok">Active</span>
+    </div>
+    <div class="cd">
+      <div class="cd-t">Brand Perception Survey</div>
+      <div class="cd-d">8 questions with conditional branching via Card buttons.</div>
+      <span class="badge badge-dr">Draft</span>
+    </div>
+    <div class="cd">
+      <div class="cd-t">Exit Interview Q4</div>
+      <div class="cd-d">5 pages, LLM follow-up, shuffle enabled.</div>
+      <span class="badge badge-w">1 dead path</span>
+    </div>
+  </div>
+
+  <div class="h-sub">Toasts</div>
+  <div class="toast-r">
+    <div class="toast"><span class="bar" style="background:var(--success)"></span>Facet published successfully</div>
+    <div class="toast"><span class="bar" style="background:var(--warning)"></span>2 dead paths detected</div>
+    <div class="toast"><span class="bar" style="background:var(--error)"></span>Content nodes must be inside a Page</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ OVERLAYS ═══ -->
+<div class="s">
+  <div class="s-title">Overlays</div>
+  <p class="s-sub">Modal, popover, tooltip. Each sits on its own elevation level. Springs enter; fades exit.</p>
+  <div class="ov-grid">
+    <div class="modal-demo">
+      <div class="modal-t">Delete "Exit Interview Q4"?</div>
+      <div class="modal-d">This facet has 42 responses. Deleting it will archive the responses and unpublish the URL. This can't be undone.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="b b-s">Cancel</button>
+        <button class="b b-d">Delete facet</button>
+      </div>
+    </div>
+    <div class="popover-demo">
+      <div class="k">Reference</div>
+      <div class="v">q-age</div>
+      <div class="k">Type</div>
+      <div class="v">Likert · 5pt</div>
+      <div class="k">Required</div>
+      <div class="v">Yes</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center">
+      <div>
+        <div class="tooltip-demo">Click to connect nodes</div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--text-faint);margin-top:16px">Modal uses <span class="mono">--e4</span> + <span class="mono">rgba(0,0,0,0.42)</span> backdrop. Popover uses <span class="mono">--e3</span>. Tooltip: stone-900 bg, 500ms open delay, no delay on close.</p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ CANVAS ═══ -->
+<div class="s">
+  <div class="s-title">Canvas Nodes</div>
+  <p class="s-sub">Each tier has a distinct color. Handles are 16px for mobile tap. Selected edges render in accent orange.</p>
+  <div class="canvas">
+    <div class="nr">
+      <div class="nd nd-start">
+        <div class="nd-h">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+          Start
+        </div>
+        <div class="nd-b" style="color:#047857">Welcome to our study...</div>
+        <div class="handle hr" style="background:var(--success)"></div>
+      </div>
+      <div class="edge"></div>
+      <div class="nd nd-page" style="min-width:180px">
+        <div class="nd-h">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          New Page
+        </div>
+        <div class="nd-b" style="padding-bottom:12px">
+          <div style="background:#F0F9FF;border:1.5px solid #BAE6FD;border-radius:8px;padding:6px 10px;font-size:10px;color:#0369A1;font-weight:500">New Likert &middot; Likert</div>
+          <div style="background:#FFF7ED;border:1.5px solid #FED7AA;border-radius:8px;padding:6px 10px;font-size:10px;color:#9A3412;font-weight:500;margin-top:6px">New Card &middot; 1 btn</div>
+        </div>
+        <div class="handle hl" style="background:var(--primary)"></div>
+        <div class="handle hr" style="background:var(--primary)"></div>
+      </div>
+      <div class="edge edge-sel"></div>
+      <div class="nd nd-end">
+        <div class="nd-h">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          End
+        </div>
+        <div class="nd-b" style="color:#B91C1C">Thank you for participating!</div>
+        <div class="handle hl" style="background:var(--error)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ STATES ═══ -->
+<div class="s">
+  <div class="s-title">Loading &amp; Empty States</div>
+  <p class="s-sub">Spinner, skeleton, progress bar, empty-state pattern. All use the same primary color and motion tokens.</p>
+
+  <div class="h-sub">Loading</div>
+  <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:center">
+    <div><div class="spinner"></div><div style="font-size:10px;color:var(--text-faint);margin-top:8px;text-align:center">Spinner</div></div>
+    <div style="flex:1;min-width:240px">
+      <div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div>
+      <div class="skeleton" style="height:12px;width:90%;margin-bottom:6px"></div>
+      <div class="skeleton" style="height:12px;width:75%"></div>
+      <div style="font-size:10px;color:var(--text-faint);margin-top:8px">Skeleton</div>
+    </div>
+    <div style="flex:1;min-width:220px">
+      <div class="progress"><div class="progress-fill"></div></div>
+      <div style="font-size:10px;color:var(--text-faint);margin-top:8px">Progress · 58%</div>
+    </div>
+  </div>
+
+  <div class="h-sub" style="margin-top:32px">Empty state</div>
+  <div class="empty">
+    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <div class="empty-t">No forms yet</div>
+    <div class="empty-d">Create your first research flow. Drag nodes, add questions, and publish to a public URL.</div>
+    <button class="b b-p">+ New Form</button>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ TABLE ═══ -->
+<div class="s">
+  <div class="s-title">Tables (Response Viewer)</div>
+  <p class="s-sub">Sticky header with uppercase labels. Hover row tints in primary-subtle. Dividers are the faint stone border.</p>
+  <div class="tbl">
+    <table>
+      <thead>
+        <tr><th>Respondent</th><th>Started</th><th>Completed</th><th>Facet</th><th style="text-align:right">Duration</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>fp_7e8a...</td><td>2 min ago</td><td><span class="badge badge-ok">Complete</span></td><td>Default</td><td style="text-align:right" class="mono">4:32</td></tr>
+        <tr><td>fp_2c4b...</td><td>14 min ago</td><td><span class="badge badge-dr">In progress</span></td><td>Variant A</td><td style="text-align:right" class="mono">—</td></tr>
+        <tr><td>fp_9d11...</td><td>2h ago</td><td><span class="badge badge-ok">Complete</span></td><td>Default</td><td style="text-align:right" class="mono">6:18</td></tr>
+        <tr><td>fp_4f03...</td><td>5h ago</td><td><span class="badge badge-w">Abandoned</span></td><td>Variant B</td><td style="text-align:right" class="mono">0:48</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ SHELL ═══ -->
+<div class="s">
+  <div class="s-title">App Shell</div>
+  <p class="s-sub">White sidebar, warm stone background. The builder canvas uses a dot grid — like graph paper for flows.</p>
+  <div class="shell">
+    <div class="shell-sb">
+      <div class="shell-logo">Parlay</div>
+      <div class="shell-ni act"><div class="shell-ico"></div>Dashboard</div>
+      <div class="shell-ni"><div class="shell-ico"></div>Settings</div>
+    </div>
+    <div class="shell-m">
+      <h3>Dashboard</h3>
+      <p>3 active forms &middot; 142 total responses</p>
+      <div style="display:flex;gap:12px;margin-top:18px">
+        <div class="cd" style="flex:1;padding:14px">
+          <div class="cd-t" style="font-size:13px">Onboarding v2</div>
+          <span class="badge badge-ok" style="margin-top:6px">Active</span>
+        </div>
+        <div class="cd" style="flex:1;padding:14px">
+          <div class="cd-t" style="font-size:13px">Exit Interview</div>
+          <span class="badge badge-dr" style="margin-top:6px">Draft</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ MOTION ═══ -->
+<div class="s">
+  <div class="s-title">Motion</div>
+  <p class="s-sub">Apple-style springs. Hover the boxes to feel the timing.</p>
+  <div class="mo-g">
+    <div><div class="mo-b" style="background:var(--primary)"></div><div class="mo-l">Panel</div></div>
+    <div><div class="mo-b" style="background:var(--accent);border-radius:50%"></div><div class="mo-l">Accent</div></div>
+    <div><div class="mo-b" style="background:var(--success)"></div><div class="mo-l">Publish</div></div>
+    <div><div class="mo-b" style="background:var(--error);border-radius:8px"></div><div class="mo-l">Destructive</div></div>
+    <div><div class="mo-b" style="background:var(--warning);border-radius:14px 4px"></div><div class="mo-l">Warning</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ TONE ═══ -->
+<div class="s">
+  <div class="s-title">Tone of Voice</div>
+  <p class="s-sub">Warm and direct. Active voice, second person. No apologies, no cute. Microcopy ≤ 7 words when possible.</p>
+  <div class="tone">
+    <div class="tone-c tone-bad">
+      <div class="tone-label">Avoid</div>
+      Oops! Something went wrong while trying to submit your changes to the server. Please try again in a few moments.
+    </div>
+    <div class="tone-c tone-good">
+      <div class="tone-label">Prefer</div>
+      Couldn't publish. Check your connection and try again.
+    </div>
+    <div class="tone-c tone-bad">
+      <div class="tone-label">Avoid</div>
+      Validation error: one or more of your Content nodes appears to be outside of a Page container.
+    </div>
+    <div class="tone-c tone-good">
+      <div class="tone-label">Prefer</div>
+      Content nodes must be inside a Page.
+    </div>
+    <div class="tone-c tone-bad">
+      <div class="tone-label">Avoid</div>
+      We're sorry, but we couldn't find any forms associated with your account at this time.
+    </div>
+    <div class="tone-c tone-good">
+      <div class="tone-label">Prefer</div>
+      No forms yet. Create your first one.
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--text-faint);margin-top:16px">
+    <strong style="color:var(--text)">CTAs are verbs.</strong> "Publish", "New Form", "Duplicate" — not "Submit Changes", "Create New Form", "Make a Copy".
+  </p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ OG ═══ -->
+<div class="s">
+  <div class="s-title">Social &amp; OG Image</div>
+  <p class="s-sub">One 1200×630 template. Wordmark + tagline on the gradient, faint dot grid fading right — same language as the builder canvas.</p>
+  <div class="og">
+    <div class="og-mark">parlay<span style="color:#FED7AA">.</span></div>
+    <div class="og-tag">Visual research flow builder</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ EMAIL ═══ -->
+<div class="s">
+  <div class="s-title">Transactional Email</div>
+  <p class="s-sub">Resend + react-email. Desaturated: primary CTA only, no accent orange — emails shouldn't feel like marketing.</p>
+  <div class="email">
+    <div class="email-h">
+      <div class="email-logo">parlay<span style="color:var(--accent)">.</span></div>
+    </div>
+    <div class="email-b">
+      <p>Hi Valentin,</p>
+      <p>Welcome to Parlay. Please verify your email address to activate your account and start building research flows.</p>
+      <a href="#" class="email-cta">Verify email</a>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:18px">If you didn't create a Parlay account, you can safely ignore this message.</p>
+    </div>
+    <div class="email-f">
+      Parlay &middot; Visual research flow builder<br>
+      Need help? Reply to this email.
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══ DARK MODE ═══ -->
+<div class="s">
+  <div class="s-title">Dark Mode</div>
+  <p class="s-sub" style="margin-bottom:0">
+    <strong style="color:var(--text)">Skipped for now.</strong> The app shell is intentionally warm-stone-on-white. The form player already supports per-facet color schemes (including dark themes) via <span class="mono">--color-primary / --color-accent / --color-background</span> CSS variables. Revisit post-launch if user demand appears.
+  </p>
+</div>
+
+<div style="text-align:center;padding:44px 20px;color:var(--text-faint);font-size:12px;font-weight:500;letter-spacing:0.01em">
+  Parlay Brand Identity &middot; Sky Blue + Orange &middot; Sora &middot; Raised Buttons &middot; Warm Stone &middot; Apple Motion
+</div>
+
+</body>
+</html>
