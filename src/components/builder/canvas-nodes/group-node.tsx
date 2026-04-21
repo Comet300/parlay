@@ -8,12 +8,12 @@ export const GroupCanvasNode = memo(function GroupCanvasNode({
   selected,
 }: NodeProps<FlowNode>) {
   const d = data as GroupNodeData
-  // Match the Page style (rounded-xl, blue palette, header bar with icon)
+  // Match the Page style (rounded-md, blue palette, header bar with icon)
   // but use lighter tints to read as "nested page" inside a Page/PageGroup.
   return (
     <div
-      className={`rounded-xl border-2 bg-blue-50/40 w-full h-full ${
-        selected ? 'border-blue-500 shadow-md' : 'border-blue-200'
+      className={`rounded-md border-2 bg-blue-50/40 w-full h-full ${
+        selected ? 'border-blue-500 shadow-e2' : 'border-blue-200'
       }`}
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b border-blue-200 bg-blue-100/40 rounded-t-[10px]">

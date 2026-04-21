@@ -182,7 +182,7 @@ export function CrepeEditorField({ value, onChange, placeholder }: CrepeEditorPr
   return (
     <div
       ref={wrapperRef}
-      className="crepe-compact min-h-[120px] flex-1 rounded-md border border-gray-200 bg-white overflow-visible flex flex-col"
+      className="crepe-compact min-h-[120px] flex-1 rounded-md border border-border bg-white overflow-visible flex flex-col"
     />
   )
 }

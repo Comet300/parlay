@@ -54,7 +54,7 @@ function BuilderComponent() {
           }
         }}
       />
-      <div className="flex-1 bg-background relative">
+      <div className="flex-1 bg-bg relative">
         <ReactFlowProvider>
           <BuilderCanvas
             facetId={facetId}

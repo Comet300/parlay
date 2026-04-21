@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import { Link } from '@tanstack/react-router'
 import { MoreVertical, ExternalLink, Pencil, Trash2, Archive, Play, Pause, RotateCcw, FileSpreadsheet } from 'lucide-react'
 import { Card } from '~/components/ui/card'
+import { Modal } from '~/components/ui/modal'
+import { Button } from '~/components/ui/button'
+import { Badge } from '~/components/ui/badge'
 import { deleteFacet, updateFacetStatus, setDefaultFacet } from '~/lib/server/facets'
 import { archiveForm, deleteForm, updateFormRoundRobin } from '~/lib/server/forms'
 
@@ -36,22 +39,15 @@ function ConfirmDialog({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onCancel}>
-      <div className="bg-surface border border-border rounded-xl p-6 shadow-lg max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-text">{title}</h3>
-        <p className="mt-2 text-sm text-text-muted">{message}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCancel} className="px-3 py-1.5 text-sm rounded-lg border border-border text-text hover:bg-light">
-            Cancel
-          </button>
-          <button onClick={onConfirm} className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600">
-            {confirmLabel}
-          </button>
-        </div>
+    <Modal open={open} onClose={onCancel} maxWidth={420}>
+      <h3 className="text-lg font-bold tracking-[-0.015em] text-text">{title}</h3>
+      <p className="mt-1 text-sm text-text-muted">{message}</p>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+        <Button variant="destructive" size="sm" onClick={onConfirm}>{confirmLabel}</Button>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -112,7 +108,7 @@ function FacetChipMenu({
       <button
         ref={triggerRef}
         onClick={(e) => { e.preventDefault(); setOpen(!open) }}
-        className="p-0.5 rounded hover:bg-black/10 transition-colors"
+        className="p-0.5 rounded hover:bg-border-light transition-colors"
         aria-label={`Actions for ${facet.nickname}`}
       >
         <MoreVertical className="h-3 w-3" />
@@ -122,12 +118,12 @@ function FacetChipMenu({
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, transform: 'translateX(-100%)' }}
-          className="z-50 w-44 rounded-lg border border-border bg-white shadow-lg py-1"
+          className="z-dropdown w-44 rounded-lg border border-border bg-white shadow-e3 py-1"
         >
           <Link
             to="/build/$facetId"
             params={{ facetId: facet.id }}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-border-light w-full"
             onClick={() => setOpen(false)}
           >
             <Pencil className="h-3.5 w-3.5" /> Edit
@@ -138,7 +134,7 @@ function FacetChipMenu({
               setOpen(false)
             }}
             disabled={facet.status !== 'active'}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full disabled:opacity-40 disabled:pointer-events-none"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-border-light w-full disabled:opacity-40 disabled:pointer-events-none"
           >
             <ExternalLink className="h-3.5 w-3.5" /> View Live
           </button>
@@ -152,7 +148,7 @@ function FacetChipMenu({
           {facet.status === 'draft' && (
             <button
               onClick={() => handleStatusChange('active')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-border-light w-full"
             >
               <Play className="h-3.5 w-3.5" /> Publish
             </button>
@@ -160,7 +156,7 @@ function FacetChipMenu({
           {facet.status === 'active' && (
             <button
               onClick={() => handleStatusChange('draft')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-border-light w-full"
             >
               <Pause className="h-3.5 w-3.5" /> Unpublish
             </button>
@@ -168,7 +164,7 @@ function FacetChipMenu({
           {facet.status === 'archived' && (
             <button
               onClick={() => handleStatusChange('active')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-border-light w-full"
             >
               <RotateCcw className="h-3.5 w-3.5" /> Re-activate
             </button>
@@ -176,7 +172,7 @@ function FacetChipMenu({
           <div className="border-t border-border my-1" />
           <button
             onClick={() => { setOpen(false); setConfirmDelete(true) }}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 w-full"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-error-strong hover:bg-error-subtle w-full"
           >
             <Trash2 className="h-3.5 w-3.5" /> Delete facet
           </button>
@@ -258,10 +254,10 @@ export function FormCard({
   }
 
   return (
-    <Card className="overflow-hidden flex flex-col">
+    <Card interactive className="overflow-hidden flex flex-col">
       {/* Thumbnail */}
       <Link to="/build/$facetId" params={{ facetId: defaultFacet?.id ?? '' }} className="block">
-        <img src="/thumbnail-placeholder.svg" alt="" className="w-full h-36 object-cover" />
+        <img src="/thumbnail-placeholder.svg?v=rebrand" alt="" className="w-full h-36 object-cover" />
       </Link>
 
       {/* Content */}
@@ -277,33 +273,27 @@ export function FormCard({
               {form.title}
             </Link>
             {allArchived ? (
-              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                Archived
-              </span>
+              <Badge className="shrink-0 uppercase tracking-[0.06em] bg-stone-200 text-text-muted">Archived</Badge>
             ) : hasActive ? (
-              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                Active
-              </span>
+              <Badge variant="success" className="shrink-0 uppercase tracking-[0.06em]">Active</Badge>
             ) : (
-              <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                Draft
-              </span>
+              <Badge className="shrink-0 uppercase tracking-[0.06em]">Draft</Badge>
             )}
           </div>
           <div className="relative" ref={formMenuRef}>
             <button
               onClick={() => setFormMenuOpen(!formMenuOpen)}
-              className="p-1 rounded hover:bg-light transition-colors shrink-0"
+              className="p-1 rounded hover:bg-border-light transition-colors shrink-0"
               aria-label="Form actions"
             >
               <MoreVertical className="h-4 w-4 text-text-muted" />
             </button>
             {formMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-lg border border-border bg-surface shadow-lg py-1">
+              <div className="absolute right-0 top-full mt-1 z-dropdown w-48 rounded-lg border border-border bg-surface shadow-e3 py-1">
                 {!allArchived && (
                   <button
                     onClick={() => { setFormMenuOpen(false); setConfirmArchiveForm(true) }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-light w-full"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-text hover:bg-border-light w-full"
                   >
                     <Archive className="h-3.5 w-3.5" /> Archive form
                   </button>
@@ -311,7 +301,7 @@ export function FormCard({
                 <div className="border-t border-border my-1" />
                 <button
                   onClick={() => { setFormMenuOpen(false); setConfirmDeleteForm(true) }}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 w-full"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-error-strong hover:bg-error-subtle w-full"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Delete form
                 </button>
@@ -326,10 +316,10 @@ export function FormCard({
             {form.facets.map((facet) => {
               const chipColor =
                 facet.status === 'active'
-                  ? 'bg-light text-primary'
+                  ? 'bg-primary-subtle text-primary'
                   : facet.status === 'archived'
-                    ? 'bg-gray-100 text-gray-400'
-                    : 'bg-gray-100 text-gray-500 opacity-60'
+                    ? 'bg-stone-200 text-text-faint'
+                    : 'bg-stone-200 text-text-muted opacity-60'
               return (
                 <span key={facet.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${chipColor}`}>
                   {facet.nickname}
@@ -350,7 +340,7 @@ export function FormCard({
                   type="checkbox"
                   checked={form.round_robin_enabled}
                   onChange={handleRoundRobinToggle}
-                  className="rounded border-border text-primary focus:ring-primary/50"
+                  className="rounded border-border text-primary focus:ring-primary-light"
                 />
                 Round-robin
               </label>
@@ -367,7 +357,7 @@ export function FormCard({
               )}
             </div>
             {pendingRoundRobinOff && (
-              <div className="flex items-center gap-2 bg-light rounded-lg px-2.5 py-1.5">
+              <div className="flex items-center gap-2 bg-primary-subtle rounded-lg px-2.5 py-1.5">
                 <span className="text-text shrink-0">Select default facet:</span>
                 <select
                   onChange={(e) => handleConfirmRoundRobinOff(e.target.value)}

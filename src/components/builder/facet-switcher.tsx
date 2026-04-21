@@ -160,14 +160,14 @@ export function FacetSwitcher({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border hover:bg-light transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border hover:bg-border-light transition-colors"
       >
         <span className="truncate max-w-[120px]">{currentFacet?.nickname ?? 'Facet'}</span>
         <ChevronDown className="h-3.5 w-3.5 text-text-muted shrink-0" />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-30 w-64 rounded-lg border border-border bg-surface shadow-lg py-1">
+        <div className="absolute left-0 top-full mt-1 z-dropdown w-64 rounded-lg border border-border bg-surface shadow-e3 py-1">
           {siblings.map((sibling) => (
             <div key={sibling.id}>
               {renamingId === sibling.id ? (
@@ -181,21 +181,21 @@ export function FacetSwitcher({
                         if (e.key === 'Enter') handleRename(sibling.id)
                         if (e.key === 'Escape') { setRenamingId(null); setRenameError('') }
                       }}
-                      className="flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      className="flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-light"
                     />
-                    <button onClick={() => handleRename(sibling.id)} className="p-1 text-primary hover:text-accent">
+                    <button onClick={() => handleRename(sibling.id)} className="p-1 text-primary hover:text-primary-hover">
                       <Check className="h-3.5 w-3.5" />
                     </button>
                     <button onClick={() => { setRenamingId(null); setRenameError('') }} className="p-1 text-text-muted hover:text-text">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {renameError && <p className="text-xs text-red-500 mt-1">{renameError}</p>}
+                  {renameError && <p className="text-xs text-error mt-1">{renameError}</p>}
                 </div>
               ) : (
                 <div
-                  className={`flex items-center justify-between px-3 py-1.5 text-sm hover:bg-light group ${
-                    sibling.id === currentFacetId ? 'bg-light text-primary font-medium' : 'text-text'
+                  className={`flex items-center justify-between px-3 py-1.5 text-sm hover:bg-border-light group ${
+                    sibling.id === currentFacetId ? 'bg-primary-subtle text-primary font-medium' : 'text-text'
                   }`}
                 >
                   <button
@@ -219,7 +219,7 @@ export function FacetSwitcher({
                         setRenameValue(sibling.nickname)
                         setRenameError('')
                       }}
-                      className="p-1 rounded hover:bg-black/5"
+                      className="p-1 rounded hover:bg-border-light"
                       title="Rename"
                     >
                       <Pencil className="h-3 w-3 text-text-muted" />
@@ -235,14 +235,14 @@ export function FacetSwitcher({
             <button
               onClick={handleRoundRobinToggle}
               disabled={toggleBusy}
-              className="flex items-center gap-2 text-sm w-full hover:bg-light rounded px-1 py-0.5"
+              className="flex items-center gap-2 text-sm w-full hover:bg-border-light rounded px-1 py-0.5"
             >
               <Shuffle className="h-3.5 w-3.5 text-text-muted shrink-0" />
               <span className="flex-1 text-left">Round-robin</span>
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                 roundRobinEnabled
                   ? 'bg-primary/10 text-primary'
-                  : 'bg-gray-100 text-text-muted'
+                  : 'bg-border-light text-text-muted'
               }`}>
                 {roundRobinEnabled ? 'ON' : 'OFF'}
               </span>
@@ -253,7 +253,7 @@ export function FacetSwitcher({
                 <select
                   value={selectedDefaultId ?? ''}
                   onChange={(e) => setSelectedDefaultId(e.target.value || null)}
-                  className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  className="w-full text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-light"
                 >
                   <option value="">Choose...</option>
                   {activeSiblings.map((s) => (
@@ -266,11 +266,11 @@ export function FacetSwitcher({
                     disabled={!selectedDefaultId || toggleBusy}
                     className="text-xs px-2 py-1 rounded bg-primary text-white hover:bg-accent disabled:opacity-50"
                   >
-                    {toggleBusy ? 'Saving...' : 'Confirm'}
+                    {toggleBusy ? 'Saving…' : 'Confirm'}
                   </button>
                   <button
                     onClick={() => setTogglingOff(false)}
-                    className="text-xs px-2 py-1 rounded text-text-muted hover:bg-light"
+                    className="text-xs px-2 py-1 rounded text-text-muted hover:bg-border-light"
                   >
                     Cancel
                   </button>
@@ -283,7 +283,7 @@ export function FacetSwitcher({
                 <select
                   value={siblings.find((s) => s.isDefault)?.id ?? ''}
                   onChange={(e) => handleSetDefault(e.target.value)}
-                  className="flex-1 min-w-0 text-xs border border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  className="flex-1 min-w-0 text-xs border border-border rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-light"
                 >
                   {siblings.map((s) => (
                     <option key={s.id} value={s.id}>{s.nickname}</option>
@@ -306,21 +306,21 @@ export function FacetSwitcher({
                       if (e.key === 'Escape') { setCreating(false); setCreateError('') }
                     }}
                     placeholder="facet-name"
-                    className="min-w-0 flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    className="min-w-0 flex-1 text-sm border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-light"
                   />
-                  <button onClick={handleCreate} className="shrink-0 p-1 text-primary hover:text-accent">
+                  <button onClick={handleCreate} className="shrink-0 p-1 text-primary hover:text-primary-hover">
                     <Check className="h-3.5 w-3.5" />
                   </button>
                   <button onClick={() => { setCreating(false); setCreateError('') }} className="shrink-0 p-1 text-text-muted hover:text-text">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                {createError && <p className="text-xs text-red-500 mt-1">{createError}</p>}
+                {createError && <p className="text-xs text-error mt-1">{createError}</p>}
               </div>
             ) : (
               <button
                 onClick={() => { setCreating(true); setNewNickname(''); setCreateError('') }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary hover:bg-light w-full"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary hover:bg-border-light w-full"
               >
                 <Plus className="h-3.5 w-3.5" /> Create facet
               </button>

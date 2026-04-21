@@ -10,7 +10,9 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Trash2, LayoutGrid } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '~/components/ui/toast'
+import { Modal } from '~/components/ui/modal'
+import { Button } from '~/components/ui/button'
 import { useShallow } from 'zustand/shallow'
 import { useBuilderStore } from '~/lib/stores/builder-store'
 import { getCanvasNodeTypes, NodeTypeRegistry } from '~/lib/node-registry'
@@ -962,7 +964,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       {!addNodeOpen && (
         <button
           onClick={handleAutoArrange}
-          className="absolute left-[8.5rem] top-3 z-30 flex items-center gap-1.5 rounded-lg bg-white border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          className="absolute left-[8.5rem] top-3 z-sticky flex items-center gap-1.5 rounded-lg bg-white border border-border px-3 py-2 text-sm font-medium text-text shadow-e1 hover:bg-border-light transition-colors"
           title="Auto-arrange nodes"
         >
           <LayoutGrid className="h-4 w-4" />
@@ -972,7 +974,7 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
       {selectedEdges.length > 0 && !addNodeOpen && (
         <button
           onClick={handleDeleteSelectedEdges}
-          className="absolute left-[16.5rem] top-3 z-30 flex items-center gap-1.5 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-100 transition-colors"
+          className="absolute left-[16.5rem] top-3 z-sticky flex items-center gap-1.5 rounded-lg bg-error-subtle border border-error-border px-3 py-2 text-sm font-medium text-error-strong shadow-e1 hover:bg-error-border transition-colors"
           title="Delete selected edge"
         >
           <Trash2 className="h-4 w-4" />
@@ -1012,45 +1014,25 @@ export function BuilderCanvas({ facetId, addNodeOpen, onToggleAddNode }: Builder
         <Background />
         <Controls />
         <MiniMap
-          className="!bg-gray-50 !border-gray-200"
+          className="!bg-border-light !border-border"
           maskColor="rgb(0,0,0,0.05)"
         />
       </ReactFlow>
       {!connectPending && <NodeConfigPopup />}
 
       {/* Delete confirmation dialog */}
-      {confirmDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-          onClick={() => setConfirmDelete(null)}
-        >
-          <div
-            className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg max-w-sm mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold">Delete nodes?</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              This will also delete {confirmDelete.childCount} child node
-              {confirmDelete.childCount > 1 ? 's' : ''} inside the container
-              {confirmDelete.nodeIds.length > 1 ? 's' : ''}.
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} maxWidth={420}>
+        <h3 className="text-lg font-bold tracking-[-0.015em] text-text">Delete nodes?</h3>
+        <p className="mt-1 text-sm text-text-muted">
+          This will also delete {confirmDelete?.childCount ?? 0} child node
+          {(confirmDelete?.childCount ?? 0) > 1 ? 's' : ''} inside the container
+          {(confirmDelete?.nodeIds.length ?? 0) > 1 ? 's' : ''}.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+          <Button variant="destructive" size="sm" onClick={handleConfirmDelete}>Delete</Button>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

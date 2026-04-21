@@ -57,17 +57,17 @@ export function CardEditor({ nodeId }: { nodeId: string }) {
         <div className="space-y-1.5">
           {d.buttons.map((btn) => (
             <div key={btn.id} className="flex items-center gap-1">
-              <GripVertical className="h-3 w-3 text-gray-300 cursor-grab" />
+              <GripVertical className="h-3 w-3 text-text-faint cursor-grab" />
               <EditorInput
                 value={btn.label}
                 onChange={(v) => updateButton(btn.id, v)}
               />
               {deadHandles.has(`button-${btn.id}`) && (
-                <span title="No outgoing edge"><AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" /></span>
+                <span title="No outgoing edge"><AlertCircle className="h-3.5 w-3.5 text-error shrink-0" /></span>
               )}
               <button
                 onClick={() => removeButton(btn.id)}
-                className="p-1 text-gray-400 hover:text-red-500"
+                className="p-1 text-text-faint hover:text-error"
                 title="Remove"
               >
                 <X className="h-3 w-3" />

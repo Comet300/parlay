@@ -88,7 +88,7 @@ export function ScriptedLLMEditor({ nodeId }: { nodeId: string }) {
         <select
           value={d.startTurnId}
           onChange={(e) => updateNodeData(nodeId, { startTurnId: e.target.value } as any)}
-          className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm"
+          className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-sm"
         >
           {d.script.map((t) => (
             <option key={t.id} value={t.id}>
@@ -100,12 +100,12 @@ export function ScriptedLLMEditor({ nodeId }: { nodeId: string }) {
 
       <div className="space-y-4 mt-3">
         {d.script.map((turn, i) => (
-          <div key={turn.id} className="border border-gray-200 rounded-lg p-2">
+          <div key={turn.id} className="border border-border rounded-lg p-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-medium text-gray-500">Turn {i + 1}</span>
+              <span className="text-[10px] font-medium text-text-muted">Turn {i + 1}</span>
               <button
                 onClick={() => removeTurn(turn.id)}
-                className="text-gray-400 hover:text-red-500"
+                className="text-text-faint hover:text-error"
                 title="Remove turn"
               >
                 <X className="h-3 w-3" />
@@ -125,7 +125,7 @@ export function ScriptedLLMEditor({ nodeId }: { nodeId: string }) {
                     onChange={(e) =>
                       updateOption(turn.id, opt.id, { label: e.target.value })
                     }
-                    className="flex-1 rounded border border-gray-200 px-1.5 py-1 text-xs"
+                    className="flex-1 rounded border border-border px-1.5 py-1 text-xs"
                     placeholder="Option label"
                   />
                   <select
@@ -135,7 +135,7 @@ export function ScriptedLLMEditor({ nodeId }: { nodeId: string }) {
                         nextTurnId: e.target.value || null,
                       })
                     }
-                    className="w-28 rounded border border-gray-200 px-1 py-1 text-xs"
+                    className="w-28 rounded border border-border px-1 py-1 text-xs"
                   >
                     <option value="">End conversation</option>
                     {d.script
@@ -148,7 +148,7 @@ export function ScriptedLLMEditor({ nodeId }: { nodeId: string }) {
                   </select>
                   <button
                     onClick={() => removeOption(turn.id, opt.id)}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-text-faint hover:text-error"
                   >
                     <X className="h-3 w-3" />
                   </button>

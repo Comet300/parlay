@@ -20,10 +20,10 @@ export const Route = createFileRoute('/login')({
 
 function mapError(error: { code?: string; status?: number; message?: string }) {
   if (error.status === 429 || error.code === 'TOO_MANY_REQUESTS')
-    return 'Too many attempts, please try again later.'
+    return 'Too many attempts. Wait a minute and retry.'
   if (error.code === 'INVALID_EMAIL_OR_PASSWORD')
     return 'Invalid email or password.'
-  return error.message || 'Something went wrong. Please try again.'
+  return error.message || "Couldn't complete that. Check your connection and retry."
 }
 
 function LoginPage() {
@@ -71,7 +71,7 @@ function LoginPage() {
       )}
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div className="mb-4 rounded-lg bg-error-subtle p-3 text-sm text-error-strong">
           {error}
         </div>
       )}
@@ -132,13 +132,13 @@ function LoginPage() {
 
       <div className="mt-4 space-y-2 text-center text-sm">
         <div>
-          <Link to="/forgot-password" className="text-primary hover:text-accent">
+          <Link to="/forgot-password" className="text-primary hover:text-primary-hover">
             Forgot password?
           </Link>
         </div>
         <div className="text-text-muted">
           Don't have an account?{' '}
-          <Link to="/signup" className="text-primary hover:text-accent">
+          <Link to="/signup" className="text-primary hover:text-primary-hover">
             Sign up
           </Link>
         </div>

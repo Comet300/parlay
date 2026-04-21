@@ -32,8 +32,8 @@ export function FormSettingsPanel({
   const setColorScheme = useBuilderStore((s) => s.setColorScheme)
 
   const scheme = colorScheme ?? {
-    primary: '#EA4C89',
-    accent: '#C4307A',
+    primary: '#0EA5E9',
+    accent: '#F97316',
     background: '#FFFFFF',
     theme: 'default',
   }
@@ -50,36 +50,36 @@ export function FormSettingsPanel({
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className={`absolute right-0 top-0 z-30 h-full bg-white border-l border-gray-200 shadow-lg overflow-y-auto ${isMobile ? 'w-full' : 'w-80'}`}
+          className={`absolute right-0 top-0 z-sticky h-full bg-white border-l border-border shadow-e3 overflow-y-auto ${isMobile ? 'w-full' : 'w-80'}`}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <span className="text-sm font-semibold text-gray-700">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border-light">
+            <span className="text-sm font-semibold text-text">
               Form Settings
             </span>
             <button
               onClick={onClose}
-              className="p-0.5 rounded hover:bg-gray-100"
+              className="p-0.5 rounded hover:bg-border-light"
             >
-              <X className="h-4 w-4 text-gray-400" />
+              <X className="h-4 w-4 text-text-faint" />
             </button>
           </div>
 
           <div className="p-4 space-y-6">
             {/* Color Scheme */}
             <section>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
                 Color Scheme
               </h4>
               <EditorField label="Primary">
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
-                    value={scheme.primary ?? '#EA4C89'}
+                    value={scheme.primary ?? '#0EA5E9'}
                     onChange={(e) => updateColor('primary', e.target.value)}
-                    className="h-8 w-8 rounded border border-gray-200 cursor-pointer"
+                    className="h-8 w-8 rounded border border-border cursor-pointer"
                   />
                   <EditorInput
-                    value={scheme.primary ?? '#EA4C89'}
+                    value={scheme.primary ?? '#0EA5E9'}
                     onChange={(v) => updateColor('primary', v)}
                   />
                 </div>
@@ -88,12 +88,12 @@ export function FormSettingsPanel({
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
-                    value={scheme.accent ?? '#C4307A'}
+                    value={scheme.accent ?? '#F97316'}
                     onChange={(e) => updateColor('accent', e.target.value)}
-                    className="h-8 w-8 rounded border border-gray-200 cursor-pointer"
+                    className="h-8 w-8 rounded border border-border cursor-pointer"
                   />
                   <EditorInput
-                    value={scheme.accent ?? '#C4307A'}
+                    value={scheme.accent ?? '#F97316'}
                     onChange={(v) => updateColor('accent', v)}
                   />
                 </div>
@@ -104,7 +104,7 @@ export function FormSettingsPanel({
                     type="color"
                     value={scheme.background ?? '#FFFFFF'}
                     onChange={(e) => updateColor('background', e.target.value)}
-                    className="h-8 w-8 rounded border border-gray-200 cursor-pointer"
+                    className="h-8 w-8 rounded border border-border cursor-pointer"
                   />
                   <EditorInput
                     value={scheme.background ?? '#FFFFFF'}
@@ -112,19 +112,19 @@ export function FormSettingsPanel({
                   />
                 </div>
               </EditorField>
-              <p className="text-[10px] text-gray-400">
+              <p className="text-[10px] text-text-faint">
                 Theme picker and component gallery carousel will be added in a follow-up.
               </p>
             </section>
 
             {/* Component Gallery placeholder */}
             <section>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
                 Component Gallery
               </h4>
               <div className="flex gap-3 overflow-x-auto py-2">
                 <div
-                  className="shrink-0 w-36 h-24 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-400"
+                  className="shrink-0 w-36 h-24 rounded-lg border border-border flex items-center justify-center text-xs text-text-faint"
                   style={{
                     backgroundColor: scheme.background,
                     borderColor: scheme.primary,
@@ -138,7 +138,7 @@ export function FormSettingsPanel({
             {/* Round-robin */}
             {siblingCount > 1 && (
               <section>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
                   Round-Robin
                 </h4>
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -151,13 +151,13 @@ export function FormSettingsPanel({
                       })
                       onRefresh?.()
                     }}
-                    className="rounded border-gray-300"
+                    className="rounded border-border"
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-text">
                     {roundRobinEnabled ? 'Enabled' : 'Disabled'}
                   </span>
                 </label>
-                <p className="text-[10px] text-gray-400 mt-1">
+                <p className="text-[10px] text-text-faint mt-1">
                   Also available in the Facet Switcher dropdown.
                 </p>
               </section>

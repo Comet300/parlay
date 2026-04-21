@@ -1,33 +1,209 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
 
-@theme {
-  --font-sans: "Inter Variable", sans-serif;
-  --color-primary: #EA4C89;
-  --color-accent: #C4307A;
-  --color-light: #FDF2F8;
-  --color-surface: #FFFFFF;
-  --color-background: #F8F9FC;
-  --color-sidebar: #FFFFFF;
-  --color-border: #E5E7EB;
-  --color-text: #111827;
-  --color-text-muted: #6B7280;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --radius-card: 12px;
+/* ────────────────────────────────────────────────────────────────────
+   Brand tokens — raw names match brand-proposal-final.html so
+   components can reference `var(--primary)`, `var(--r-md)`, `var(--e1)`
+   directly without Tailwind prefixes.
+   ──────────────────────────────────────────────────────────────────── */
+:root {
+  /* Color — brand */
+  --primary: #0EA5E9;
+  --primary-hover: #0284C7;
+  --primary-light: #38BDF8;
+  --primary-subtle: #F0F9FF;
+  --accent: #F97316;
+  --accent-hover: #EA580C;
+  --accent-light: #FB923C;
+  --accent-subtle: #FFF7ED;
+  --accent-strong: #C2410C;
+
+  /* Color — stone neutrals */
+  --surface: #FFFFFF;
+  --bg: #FAFAF9;
+  --border: #E7E5E4;
+  --border-light: #F5F5F4;
+  --text: #292524;
+  --text-muted: #78716C;
+  --text-faint: #A8A29E;
+  --stone-200: #E7E5E4;
+  --stone-300: #D6D3D1;
+  --stone-900: #1C1917;
+  --backdrop: rgba(0, 0, 0, 0.42);
+
+  /* Color — semantic */
+  --success: #10B981;
+  --success-subtle: #ECFDF5;
+  --success-strong: #059669;
+  --success-border: #BBF7D0;
+  --warning: #F59E0B;
+  --warning-subtle: #FFFBEB;
+  --warning-strong: #B45309;
+  --error: #EF4444;
+  --error-subtle: #FEF2F2;
+  --error-strong: #991B1B;
+  --error-border: #FECACA;
+  --error-muted-bg: #FEE2E2;
+
+  /* Radius */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --e0: none;
+  --e1: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --e2: 0 2px 6px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --e3: 0 6px 16px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --e4: 0 16px 40px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --e-toast: 0 4px 12px rgba(0, 0, 0, 0.07);
+
+  /* Motion */
+  --d-instant: 100ms;
+  --d-fast: 150ms;
+  --d-base: 200ms;
+  --d-med: 300ms;
+  --d-slow: 400ms;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Z-index */
+  --z-canvas-handle: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-popover: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 410;
+  --z-toast: 500;
+  --z-tooltip: 600;
 }
 
+/* ────────────────────────────────────────────────────────────────────
+   Tailwind v4 design tokens — mapped to brand vars so utility classes
+   (bg-primary, text-text-muted, rounded-md, shadow-e1 …) compile to the
+   same values. @theme *generates* utilities; :root above is what
+   components read directly.
+   ──────────────────────────────────────────────────────────────────── */
+@theme {
+  --font-sans: 'Sora', system-ui, -apple-system, sans-serif;
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-strong: var(--accent-strong);
+
+  --color-surface: var(--surface);
+  --color-bg: var(--bg);
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+
+  --color-stone-200: var(--stone-200);
+  --color-stone-300: var(--stone-300);
+  --color-stone-900: var(--stone-900);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-strong: var(--warning-strong);
+  --color-error: var(--error);
+  --color-error-subtle: var(--error-subtle);
+  --color-error-strong: var(--error-strong);
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius: var(--r);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-pill: var(--r-pill);
+
+  --shadow-e1: var(--e1);
+  --shadow-e2: var(--e2);
+  --shadow-e3: var(--e3);
+  --shadow-e4: var(--e4);
+  --shadow-toast: var(--e-toast);
+
+  --text-display: 32px;
+  --text-title: 22px;
+  --text-subtitle: 15px;
+  --text-body: 14px;
+  --text-small: 12px;
+  --text-micro: 10px;
+
+  --z-index-canvas-handle: 10;
+  --z-index-dropdown: 100;
+  --z-index-sticky: 200;
+  --z-index-popover: 300;
+  --z-index-modal-backdrop: 400;
+  --z-index-modal: 410;
+  --z-index-toast: 500;
+  --z-index-tooltip: 600;
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Typography recipes — full size + weight + tracking per the scale.
+   Use via `className="typo-display"` etc.
+   ──────────────────────────────────────────────────────────────────── */
+.typo-display  { font-size: 32px; font-weight: 800; letter-spacing: -0.032em; line-height: 1.1; }
+.typo-title    { font-size: 22px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.2; }
+.typo-subtitle { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+.typo-body     { font-size: 14px; font-weight: 400; }
+.typo-small    { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.typo-micro    { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+
+/* ────────────────────────────────────────────────────────────────────
+   Base styles
+   ──────────────────────────────────────────────────────────────────── */
 body {
   font-family: var(--font-sans);
-  color: var(--color-text);
-  background-color: var(--color-background);
+  font-feature-settings: "ss01", "cv11";
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Selected edge — brand pink outline. Cover multiple React Flow v12
-   variants for the "selected" marker. */
+*:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: var(--d-instant) !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   Shimmer animation (used by Skeleton)
+   ──────────────────────────────────────────────────────────────────── */
+@keyframes shim {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   React Flow overrides
+   ──────────────────────────────────────────────────────────────────── */
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge[data-selected="true"] .react-flow__edge-path,
 .react-flow__edge-path.selected {
-  stroke: #EA4C89 !important;
+  stroke: var(--accent) !important;
   stroke-width: 3 !important;
 }
 .react-flow__edge.selected .react-flow__edge-interaction,
@@ -35,10 +211,6 @@ body {
   stroke: transparent;
 }
 
-/* Strip React Flow's default chrome (border/background/shadow) for our
-   custom-styled nodes. We render our own container/leaf styling inside.
-   Note: drop_preview is INTENTIONALLY excluded — we want it to have a
-   visible dashed-border outline from the wrapper itself. */
 .react-flow__node-page,
 .react-flow__node-page_group,
 .react-flow__node-group,
@@ -57,20 +229,17 @@ body {
   padding: 0 !important;
 }
 
-/* Connection handles — ensure they sit above node content and are
-   tappable on touch devices for connectOnClick to work. */
 .react-flow__handle {
-  z-index: 10;
+  z-index: var(--z-canvas-handle);
   pointer-events: auto !important;
 }
 
-/* Skeleton preview node — Apple-style soft placeholder.
-   A subtle translucent fill with a hairline border. No dashes, no pulse. */
+/* Drop-preview skeleton — sky-blue hairline, matches Page node semantic */
 .react-flow__node-drop_preview {
   pointer-events: none;
-  background: rgba(99, 102, 241, 0.06) !important;
-  border: 1px solid rgba(99, 102, 241, 0.22) !important;
-  border-radius: 8px !important;
+  background: rgba(14, 165, 233, 0.06) !important;
+  border: 1px solid rgba(14, 165, 233, 0.22) !important;
+  border-radius: var(--r-sm) !important;
   box-sizing: border-box !important;
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.4) !important;
 }

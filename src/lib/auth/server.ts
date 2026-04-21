@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { Pool } from 'pg'
 import { Resend } from 'resend'
+import { verificationEmail, resetPasswordEmail } from '~/lib/email/templates'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -13,22 +14,24 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
+      const { subject, html } = resetPasswordEmail(user.name ?? null, url)
       await resend.emails.send({
         from: 'Parlay <noreply@parlay.example.com>',
         to: user.email,
-        subject: 'Reset your password',
-        html: `<p>Click <a href="${url}">here</a> to reset your password.</p>`,
+        subject,
+        html,
       })
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
+      const { subject, html } = verificationEmail(user.name ?? null, url)
       await resend.emails.send({
         from: 'Parlay <noreply@parlay.example.com>',
         to: user.email,
-        subject: 'Verify your email',
-        html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`,
+        subject,
+        html,
       })
     },
   },

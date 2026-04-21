@@ -24,14 +24,14 @@ function HelpTooltip({ text }: { text: string }) {
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        className="inline-flex items-center justify-center h-3 w-3 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300"
+        className="inline-flex items-center justify-center h-3 w-3 rounded-full text-text-faint hover:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary-light"
       >
         <HelpCircle className="h-3 w-3" />
       </button>
       {open && (
         <span
           role="tooltip"
-          className="pointer-events-none absolute left-4 top-0 z-50 w-64 rounded-md bg-gray-900 px-2 py-1.5 text-[11px] font-normal leading-snug text-white shadow-lg whitespace-normal"
+          className="pointer-events-none absolute left-4 top-0 z-tooltip w-64 rounded-md bg-stone-900 px-2 py-1.5 text-[11px] font-normal leading-snug text-white shadow-e3 whitespace-normal"
         >
           {text}
         </span>
@@ -78,7 +78,7 @@ export function BaseContentFields({ nodeId, showRequired = false }: BaseContentF
       </EditorField>
 
       <label className="block mb-3">
-        <span className="text-xs font-medium text-gray-600 mb-1 flex items-center shrink-0">
+        <span className="text-xs font-medium text-text-muted mb-1 flex items-center shrink-0">
           Reference
           <HelpTooltip text={REFERENCE_TOOLTIP_TEXT} />
         </span>
@@ -110,15 +110,15 @@ export function BaseContentFields({ nodeId, showRequired = false }: BaseContentF
           placeholder="e.g. q-age"
         />
         {aliasConflict && (
-          <p className="text-[10px] text-red-500 mt-0.5">Duplicate alias — must be unique</p>
+          <p className="text-[10px] text-error mt-0.5">Duplicate alias — must be unique</p>
         )}
         {aliasInvalid && (
-          <p className="text-[10px] text-red-500 mt-0.5">
+          <p className="text-[10px] text-error mt-0.5">
             Lowercase alphanumeric with hyphens only
           </p>
         )}
         {aliasWarning && (
-          <p className="text-[10px] text-amber-600 mt-0.5">{aliasWarning}</p>
+          <p className="text-[10px] text-warning-strong mt-0.5">{aliasWarning}</p>
         )}
       </label>
 

@@ -11,7 +11,7 @@ export function EditorField({
 }) {
   return (
     <label className={`block mb-3 ${className ?? ''}`}>
-      <span className="text-xs font-medium text-gray-600 mb-1 block shrink-0">{label}</span>
+      <span className="text-xs font-medium text-text-muted mb-1 block shrink-0">{label}</span>
       {children}
     </label>
   )
@@ -34,7 +34,7 @@ export function EditorInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200"
+      className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-sm text-text focus:border-primary-light focus:outline-none focus:ring-1 focus:ring-primary-light"
     />
   )
 }
@@ -56,7 +56,7 @@ export function EditorTextarea({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200 resize-y"
+      className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-sm text-text focus:border-primary-light focus:outline-none focus:ring-1 focus:ring-primary-light resize-y"
     />
   )
 }
@@ -76,9 +76,9 @@ export function EditorCheckbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="rounded border-gray-300 text-blue-500 focus:ring-blue-200"
+        className="rounded border-border text-blue-500 focus:ring-primary-light"
       />
-      <span className="text-xs text-gray-700">{label}</span>
+      <span className="text-xs text-text">{label}</span>
     </label>
   )
 }

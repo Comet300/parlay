@@ -11,10 +11,15 @@ export function Sidebar({ onNavClick }: { onNavClick?: () => void }) {
   const currentPath = matches[matches.length - 1]?.fullPath ?? ''
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full w-60 flex-col border-r border-border bg-surface">
       <div className="p-5">
-        <Link to="/dashboard" onClick={onNavClick} className="text-xl font-bold text-primary">
-          Parlay
+        <Link
+          to="/dashboard"
+          onClick={onNavClick}
+          className="text-xl font-extrabold tracking-tight text-primary"
+          style={{ fontWeight: 800, letterSpacing: '-0.03em' }}
+        >
+          parlay<span className="text-accent">.</span>
         </Link>
       </div>
       <nav className="flex-1 px-3">
@@ -27,8 +32,8 @@ export function Sidebar({ onNavClick }: { onNavClick?: () => void }) {
               onClick={onNavClick}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'border-l-2 border-primary bg-light text-accent'
-                  : 'text-text-muted hover:bg-light hover:text-text'
+                  ? 'border-l-[2.5px] border-primary bg-primary-subtle text-primary'
+                  : 'text-text-muted hover:bg-border-light hover:text-text'
               }`}
             >
               <item.icon className="h-5 w-5" />

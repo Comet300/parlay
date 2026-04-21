@@ -10,8 +10,8 @@ export const PageGroupCanvasNode = memo(function PageGroupCanvasNode({
   const d = data as PageGroupNodeData
   return (
     <div
-      className={`rounded-xl border-2 border-dashed bg-violet-50/50 w-full h-full ${
-        selected ? 'border-violet-500 shadow-md' : 'border-violet-300'
+      className={`rounded-md border-2 border-dashed bg-violet-50/50 w-full h-full ${
+        selected ? 'border-violet-500 shadow-e2' : 'border-violet-300'
       }`}
     >
       <Handle

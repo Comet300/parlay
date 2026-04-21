@@ -13,10 +13,10 @@ export const Route = createFileRoute('/signup')({
 
 function mapError(error: { code?: string; status?: number; message?: string }) {
   if (error.status === 429 || error.code === 'TOO_MANY_REQUESTS')
-    return 'Too many attempts, please try again later.'
+    return 'Too many attempts. Wait a minute and retry.'
   if (error.code === 'USER_ALREADY_EXISTS')
     return 'An account with this email already exists.'
-  return error.message || 'Something went wrong. Please try again.'
+  return error.message || "Couldn't complete that. Check your connection and retry."
 }
 
 function SignupPage() {
@@ -65,7 +65,7 @@ function SignupPage() {
   return (
     <AuthLayout title="Create your account">
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div className="mb-4 rounded-lg bg-error-subtle p-3 text-sm text-error-strong">
           {error}
         </div>
       )}
@@ -141,7 +141,7 @@ function SignupPage() {
 
       <div className="mt-4 text-center text-sm text-text-muted">
         Already have an account?{' '}
-        <Link to="/login" className="text-primary hover:text-accent">
+        <Link to="/login" className="text-primary hover:text-primary-hover">
           Log in
         </Link>
       </div>

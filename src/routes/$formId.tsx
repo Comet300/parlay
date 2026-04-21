@@ -124,17 +124,17 @@ function PlayerComponent() {
 
   if (state.status === 'loading') {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#F8F9FC]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#EA4C89] border-t-transparent" />
+      <div className="flex h-screen w-screen items-center justify-center bg-bg">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     )
   }
 
   if (state.status === 'not_found') {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#F8F9FC] gap-3">
-        <p className="text-6xl font-bold text-[#EA4C89]">404</p>
-        <p className="text-lg text-gray-500">This form could not be found.</p>
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-bg gap-3">
+        <p className="text-6xl font-bold text-primary">404</p>
+        <p className="text-lg text-text-muted">This form could not be found.</p>
       </div>
     )
   }
@@ -145,20 +145,20 @@ function PlayerComponent() {
 
   if (state.status === 'completed') {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#F8F9FC] gap-4">
-        <p className="text-2xl font-semibold text-gray-800">Thank you!</p>
-        <p className="text-gray-500">You have already completed this form.</p>
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-bg gap-4">
+        <p className="text-2xl font-semibold text-text">Thank you!</p>
+        <p className="text-text-muted">You have already completed this form.</p>
       </div>
     )
   }
 
   // status === 'resolved' — placeholder for full form renderer
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#F8F9FC] gap-4">
-      <p className="text-lg text-gray-500">
-        Form loaded: <span className="font-medium text-gray-800">{state.formTitle}</span>
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-bg gap-4">
+      <p className="text-lg text-text-muted">
+        Form loaded: <span className="font-medium text-text">{state.formTitle}</span>
       </p>
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-text-faint">
         Facet: {state.facet.nickname}
       </p>
     </div>

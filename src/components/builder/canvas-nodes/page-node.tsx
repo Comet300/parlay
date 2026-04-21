@@ -10,8 +10,8 @@ export const PageCanvasNode = memo(function PageCanvasNode({
   const d = data as PageNodeData
   return (
     <div
-      className={`rounded-xl border-2 bg-blue-50/50 w-full h-full ${
-        selected ? 'border-blue-500 shadow-md' : 'border-blue-300'
+      className={`rounded-md border-2 bg-blue-50/50 w-full h-full ${
+        selected ? 'border-blue-500 shadow-e2' : 'border-blue-300'
       }`}
     >
       <Handle

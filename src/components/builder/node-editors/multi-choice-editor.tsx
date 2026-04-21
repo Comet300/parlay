@@ -48,7 +48,7 @@ export function MultiChoiceEditor({ nodeId }: { nodeId: string }) {
               />
               <button
                 onClick={() => removeOption(opt.id)}
-                className="p-1 text-gray-400 hover:text-red-500"
+                className="p-1 text-text-faint hover:text-error"
                 title="Remove"
               >
                 <X className="h-3 w-3" />

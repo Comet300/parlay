@@ -13,8 +13,8 @@ export const EndCanvasNode = memo(function EndCanvasNode({
 
   return (
     <div
-      className={`rounded-xl border-2 bg-red-50 px-4 py-3 min-w-[160px] max-w-[200px] ${
-        selected ? 'border-red-500 shadow-md' : 'border-red-300'
+      className={`rounded-md border-2 bg-error-subtle px-4 py-3 min-w-[160px] max-w-[200px] ${
+        selected ? 'border-red-500 shadow-e2' : 'border-red-300'
       }`}
     >
       <Handle
@@ -22,12 +22,12 @@ export const EndCanvasNode = memo(function EndCanvasNode({
         position={Position.Left}
         className="!bg-red-500 !w-4 !h-4 !border-2 !border-white"
       />
-      <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
-        <Square className="h-3 w-3 fill-red-500 text-red-500" />
+      <div className="flex items-center gap-2 text-sm font-semibold text-error-strong">
+        <Square className="h-3 w-3 fill-red-500 text-error" />
         End
       </div>
       {preview && (
-        <p className="mt-1 text-[11px] text-red-600/70 truncate">
+        <p className="mt-1 text-[11px] text-error-strong/70 truncate">
           {preview}
         </p>
       )}

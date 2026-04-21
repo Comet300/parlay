@@ -64,10 +64,10 @@ export function ConditionInput({ value, onChange, placeholder }: ConditionInputP
           }
         }}
         placeholder={placeholder}
-        className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200"
+        className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-sm text-text focus:border-primary-light focus:outline-none focus:ring-1 focus:ring-primary-light"
       />
       {showDropdown && filtered.length > 0 && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-full max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 top-full mt-1 z-dropdown w-full max-h-40 overflow-y-auto rounded-lg border border-border bg-white shadow-e3">
           {filtered.map((s) => (
             <button
               key={s.nodeId}
@@ -78,8 +78,8 @@ export function ConditionInput({ value, onChange, placeholder }: ConditionInputP
               className="flex items-center gap-2 w-full px-2.5 py-1.5 text-left text-sm hover:bg-blue-50"
             >
               <code className="text-xs text-blue-600 font-mono">{s.alias}</code>
-              <span className="text-xs text-gray-400 truncate">{s.label}</span>
-              <span className="ml-auto text-[10px] text-gray-300">{s.type}</span>
+              <span className="text-xs text-text-faint truncate">{s.label}</span>
+              <span className="ml-auto text-[10px] text-text-faint">{s.type}</span>
             </button>
           ))}
         </div>

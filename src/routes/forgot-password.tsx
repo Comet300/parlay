@@ -27,7 +27,7 @@ function ForgotPasswordPage() {
 
     if (resetError) {
       if (resetError.status === 429 || resetError.code === 'TOO_MANY_REQUESTS') {
-        setError('Too many attempts, please try again later.')
+        setError('Too many attempts. Wait a minute and retry.')
       } else {
         // Show success even on error to prevent email enumeration
         setSent(true)
@@ -48,7 +48,7 @@ function ForgotPasswordPage() {
           password reset link. Check your inbox.
         </p>
         <div className="mt-6 text-center">
-          <Link to="/login" className="text-sm text-primary hover:text-accent">
+          <Link to="/login" className="text-sm text-primary hover:text-primary-hover">
             Back to login
           </Link>
         </div>
@@ -59,7 +59,7 @@ function ForgotPasswordPage() {
   return (
     <AuthLayout title="Reset your password">
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div className="mb-4 rounded-lg bg-error-subtle p-3 text-sm text-error-strong">
           {error}
         </div>
       )}
@@ -90,7 +90,7 @@ function ForgotPasswordPage() {
       </form>
 
       <div className="mt-4 text-center">
-        <Link to="/login" className="text-sm text-primary hover:text-accent">
+        <Link to="/login" className="text-sm text-primary hover:text-primary-hover">
           Back to login
         </Link>
       </div>

@@ -63,26 +63,26 @@ export function NodeConfigPopup() {
   if (isMobile) {
     return (
       <>
-        <div className="fixed inset-0 z-30 bg-black/15" onClick={handleClose} />
+        <div className="fixed inset-0 z-modal-backdrop bg-[var(--backdrop)]" onClick={handleClose} />
         <div
           ref={ref}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           data-node-config-popup
-          className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 rounded-t-xl shadow-xl max-h-[70vh] overflow-y-auto"
+          className="fixed bottom-0 left-0 right-0 z-modal bg-white border-t border-border rounded-t-[var(--r-lg)] shadow-e3 max-h-[70vh] overflow-y-auto"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white rounded-t-xl">
-            <span className="text-sm font-medium text-gray-600">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border-light sticky top-0 bg-white rounded-t-[var(--r-lg)]">
+            <span className="text-sm font-medium text-text-muted">
               {descriptor.label}
             </span>
             <div className="flex items-center gap-1">
               {isDeletable && (
-                <button onClick={handleDelete} className="p-1 rounded hover:bg-red-50" title="Delete node">
-                  <Trash2 className="h-4 w-4 text-red-400" />
+                <button onClick={handleDelete} className="p-1 rounded hover:bg-error-subtle" title="Delete node">
+                  <Trash2 className="h-4 w-4 text-error" />
                 </button>
               )}
-              <button onClick={handleClose} className="p-1 rounded hover:bg-gray-100">
-                <X className="h-4 w-4 text-gray-400" />
+              <button onClick={handleClose} className="p-1 rounded hover:bg-border-light">
+                <X className="h-4 w-4 text-text-faint" />
               </button>
             </div>
           </div>
@@ -98,45 +98,45 @@ export function NodeConfigPopup() {
 
   return (
     <>
-      <div className="fixed inset-0 z-30 bg-black/10" onClick={handleClose} />
+      <div className="fixed inset-0 z-modal-backdrop bg-[var(--backdrop)]" onClick={handleClose} />
       <div
         ref={ref}
         onMouseDown={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         data-node-config-popup
-        className="fixed z-40 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-visible flex flex-col"
+        className="fixed z-modal bg-white border border-border rounded-lg shadow-e4 overflow-visible flex flex-col"
         style={{
           left: '50%',
           top: '50%',
           transform: 'translate(-50%, -50%)',
           width,
           height,
-          transition: 'width 200ms ease, height 200ms ease',
+          transition: 'width var(--d-base) var(--ease-out), height var(--d-base) var(--ease-out)',
         }}
       >
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-white rounded-t-xl shrink-0">
-          <span className="text-sm font-medium text-gray-600">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-light bg-white rounded-t-[var(--r-lg)] shrink-0">
+          <span className="text-sm font-medium text-text-muted">
             {descriptor.label}
           </span>
           <div className="flex items-center gap-1">
             {isDeletable && (
-              <button onClick={handleDelete} className="p-1 rounded hover:bg-red-50" title="Delete node">
-                <Trash2 className="h-3.5 w-3.5 text-red-400" />
+              <button onClick={handleDelete} className="p-1 rounded hover:bg-error-subtle" title="Delete node">
+                <Trash2 className="h-3.5 w-3.5 text-error" />
               </button>
             )}
             <button
               onClick={() => setMaximized((v) => !v)}
-              className="p-1 rounded hover:bg-gray-100"
+              className="p-1 rounded hover:bg-border-light"
               title={maximized ? 'Minimize' : 'Expand'}
             >
               {maximized ? (
-                <Minimize2 className="h-3.5 w-3.5 text-gray-400" />
+                <Minimize2 className="h-3.5 w-3.5 text-text-faint" />
               ) : (
-                <Maximize2 className="h-3.5 w-3.5 text-gray-400" />
+                <Maximize2 className="h-3.5 w-3.5 text-text-faint" />
               )}
             </button>
-            <button onClick={handleClose} className="p-1 rounded hover:bg-gray-100">
-              <X className="h-3.5 w-3.5 text-gray-400" />
+            <button onClick={handleClose} className="p-1 rounded hover:bg-border-light">
+              <X className="h-3.5 w-3.5 text-text-faint" />
             </button>
           </div>
         </div>

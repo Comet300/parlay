@@ -9,8 +9,8 @@ interface MetricCardProps {
 export function MetricCard({ value, label, className = '' }: MetricCardProps) {
   return (
     <Card className={`p-6 ${className}`}>
-      <div className="text-3xl font-bold text-text">{value}</div>
-      <div className="mt-1 text-sm text-text-muted">{label}</div>
+      <div className="text-[32px] font-extrabold tracking-[-0.032em] text-text leading-none">{value}</div>
+      <div className="mt-2 text-xs font-medium text-text-muted">{label}</div>
     </Card>
   )
 }

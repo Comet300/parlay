@@ -7,7 +7,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-bg">
       {/* Desktop sidebar */}
       <div className="hidden md:flex">
         <Sidebar />
@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile hamburger */}
       <button
-        className="fixed top-4 left-4 z-50 rounded-lg bg-surface p-2 shadow-card md:hidden"
+        className="fixed top-4 left-4 z-sticky rounded-lg bg-surface p-2 shadow-e1 md:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="Open navigation"
       >
@@ -27,14 +27,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         {mobileOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-40 bg-black/30"
+              className="fixed inset-0 z-modal-backdrop bg-[var(--backdrop)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              className="fixed inset-y-0 left-0 z-50 w-60"
+              className="fixed inset-y-0 left-0 z-modal w-60"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}

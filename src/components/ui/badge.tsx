@@ -1,10 +1,11 @@
 import type { HTMLAttributes } from 'react'
 
 const variantStyles = {
-  default: 'bg-light text-accent',
-  success: 'bg-emerald-50 text-emerald-700',
-  warning: 'bg-amber-50 text-amber-700',
-  danger: 'bg-red-50 text-red-700',
+  default: 'bg-primary-subtle text-primary',
+  success: 'bg-success-subtle text-success-strong',
+  warning: 'bg-warning-subtle text-warning-strong',
+  danger: 'bg-error-subtle text-error-strong',
+  accent: 'bg-accent-subtle text-accent-strong',
 } as const
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
@@ -14,7 +15,7 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 export function Badge({ variant = 'default', className = '', ...props }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-[10px] font-bold tracking-[0.05em] uppercase ${variantStyles[variant]} ${className}`}
       {...props}
     />
   )

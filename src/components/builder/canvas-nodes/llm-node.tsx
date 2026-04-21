@@ -21,8 +21,8 @@ export const LLMCanvasNode = memo(function LLMCanvasNode({
 
   return (
     <div
-      className={`rounded-xl border-2 bg-white px-4 py-3 min-w-[180px] ${
-        selected ? `${selectedBorder} shadow-md` : borderColor
+      className={`rounded-md border-2 bg-white px-4 py-3 min-w-[180px] ${
+        selected ? `${selectedBorder} shadow-e2` : borderColor
       }`}
     >
       <Handle
@@ -42,18 +42,18 @@ export const LLMCanvasNode = memo(function LLMCanvasNode({
         </span>
       </div>
 
-      <p className="text-xs font-medium text-gray-800 truncate">
+      <p className="text-xs font-medium text-text truncate">
         {'label' in data ? String(data.label) : ''}
       </p>
 
       {isScripted && (
-        <p className="text-[10px] text-gray-400 mt-0.5">
+        <p className="text-[10px] text-text-faint mt-0.5">
           {(data as ScriptedLLMNodeData).script?.length ?? 0} turns
         </p>
       )}
 
       {!isScripted && (
-        <p className="text-[10px] text-gray-400 mt-0.5">
+        <p className="text-[10px] text-text-faint mt-0.5">
           {(data as RealLLMNodeData).provider || 'no provider'}
           {' · '}
           {(data as RealLLMNodeData).model || 'no model'}

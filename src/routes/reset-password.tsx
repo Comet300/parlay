@@ -34,7 +34,7 @@ function ResetPasswordPage() {
           This password reset link is invalid or has expired.
         </p>
         <div className="mt-6 text-center">
-          <Link to="/forgot-password" className="text-sm text-primary hover:text-accent">
+          <Link to="/forgot-password" className="text-sm text-primary hover:text-primary-hover">
             Request a new reset link
           </Link>
         </div>
@@ -62,7 +62,7 @@ function ResetPasswordPage() {
       if (resetError.code === 'INVALID_TOKEN') {
         setError('This reset link is invalid or expired.')
       } else {
-        setError(resetError.message || 'Something went wrong. Please try again.')
+        setError(resetError.message || "Couldn't complete that. Check your connection and retry.")
       }
       setLoading(false)
       return
@@ -77,7 +77,7 @@ function ResetPasswordPage() {
   return (
     <AuthLayout title="Set new password">
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div className="mb-4 rounded-lg bg-error-subtle p-3 text-sm text-error-strong">
           {error}
         </div>
       )}
@@ -119,7 +119,7 @@ function ResetPasswordPage() {
       </form>
 
       <div className="mt-4 text-center">
-        <Link to="/login" className="text-sm text-primary hover:text-accent">
+        <Link to="/login" className="text-sm text-primary hover:text-primary-hover">
           Back to login
         </Link>
       </div>

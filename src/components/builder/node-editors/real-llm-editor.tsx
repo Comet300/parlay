@@ -27,12 +27,12 @@ export function RealLLMEditor({ nodeId }: { nodeId: string }) {
 
       <EditorField label="Provider">
         {loadingProviders ? (
-          <p className="text-xs text-gray-400">Loading providers...</p>
+          <p className="text-xs text-text-faint">Loading providers...</p>
         ) : providers.length > 0 ? (
           <select
             value={d.provider}
             onChange={(e) => updateNodeData(nodeId, { provider: e.target.value } as any)}
-            className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-200"
+            className="w-full rounded-md border border-border bg-white px-2.5 py-1.5 text-sm text-text focus:border-primary-light focus:outline-none focus:ring-1 focus:ring-primary-light"
           >
             <option value="">Select a provider</option>
             {providers.map((p) => (
@@ -48,9 +48,9 @@ export function RealLLMEditor({ nodeId }: { nodeId: string }) {
               onChange={(v) => updateNodeData(nodeId, { provider: v } as any)}
               placeholder="e.g. openai, anthropic"
             />
-            <p className="text-[10px] text-amber-600 mt-0.5">
+            <p className="text-[10px] text-warning-strong mt-0.5">
               No providers configured.{' '}
-              <a href="/settings" className="underline hover:text-amber-700">
+              <a href="/settings" className="underline hover:text-warning-strong">
                 Configure in Settings
               </a>
             </p>
@@ -73,7 +73,7 @@ export function RealLLMEditor({ nodeId }: { nodeId: string }) {
           placeholder="System instructions for the LLM..."
           rows={4}
         />
-        <p className="text-[10px] text-gray-400 mt-0.5">Hidden from respondents</p>
+        <p className="text-[10px] text-text-faint mt-0.5">Hidden from respondents</p>
       </EditorField>
 
       <EditorField label="Ending condition">
@@ -83,7 +83,7 @@ export function RealLLMEditor({ nodeId }: { nodeId: string }) {
           placeholder="Instruct when to output [END_CONVERSATION]..."
           rows={3}
         />
-        <p className="text-[10px] text-gray-400 mt-0.5">
+        <p className="text-[10px] text-text-faint mt-0.5">
           Hidden from respondents — instruct the LLM when to output [END_CONVERSATION]
         </p>
       </EditorField>

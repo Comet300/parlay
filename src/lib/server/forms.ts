@@ -43,8 +43,8 @@ const DEFAULT_FLOW_DEFINITION = {
 }
 
 const DEFAULT_COLOR_SCHEME = {
-  primary: '#EA4C89',
-  accent: '#C4307A',
+  primary: '#0EA5E9',
+  accent: '#F97316',
   background: '#FFFFFF',
   theme: 'default',
 }

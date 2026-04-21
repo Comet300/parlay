@@ -13,8 +13,8 @@ export const StartCanvasNode = memo(function StartCanvasNode({
 
   return (
     <div
-      className={`rounded-xl border-2 bg-emerald-50 px-4 py-3 min-w-[160px] max-w-[200px] ${
-        selected ? 'border-emerald-500 shadow-md' : 'border-emerald-300'
+      className={`rounded-md border-2 bg-emerald-50 px-4 py-3 min-w-[160px] max-w-[200px] ${
+        selected ? 'border-emerald-500 shadow-e2' : 'border-emerald-300'
       }`}
     >
       <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">

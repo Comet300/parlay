@@ -20,17 +20,17 @@ export const CardCanvasNode = memo(function CardCanvasNode({
   return (
     <div
       className={`rounded-md border bg-white px-2.5 py-1.5 w-full h-full flex items-center gap-2 cursor-grab active:cursor-grabbing ${
-        selected ? 'border-blue-500 ring-1 ring-blue-200' : 'border-gray-200'
+        selected ? 'border-blue-500 ring-1 ring-blue-200' : 'border-border'
       }`}
     >
       <span className="inline-flex items-center justify-center rounded w-6 h-6 shrink-0 bg-orange-100 text-orange-700">
         <CreditCard className="h-3 w-3" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-gray-800 truncate leading-tight">
+        <p className="text-xs text-text truncate leading-tight">
           {d.label || 'Untitled Card'}
         </p>
-        <p className="text-[10px] text-gray-400 truncate">
+        <p className="text-[10px] text-text-faint truncate">
           Card · {d.buttons.length} btn{d.buttons.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -43,7 +43,7 @@ export const CardCanvasNode = memo(function CardCanvasNode({
         const colors = [
           '!bg-blue-500',
           '!bg-emerald-500',
-          '!bg-amber-500',
+          '!bg-warning',
           '!bg-violet-500',
           '!bg-rose-500',
           '!bg-cyan-500',
@@ -51,7 +51,7 @@ export const CardCanvasNode = memo(function CardCanvasNode({
           '!bg-teal-500',
         ]
         const color = deadHandles.has(`button-${btn.id}`)
-          ? '!bg-red-500'
+          ? '!bg-error'
           : colors[i % colors.length]
         return (
           <Handle

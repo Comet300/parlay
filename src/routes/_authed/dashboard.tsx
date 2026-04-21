@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { X, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Search, Plus, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { EmptyState } from '~/components/ui/empty-state'
+import { Spinner } from '~/components/ui/spinner'
 import { FormCard } from '~/components/dashboard/form-card'
 import { loadDashboardForms, type SortOption } from '~/lib/server/loaders'
 import { createForm } from '~/lib/server/forms'
@@ -113,13 +115,13 @@ function DashboardComponent() {
   return (
     <div>
       {!user.emailVerified && !bannerDismissed && (
-        <div className="mb-4 flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-          <p className="text-sm text-amber-800">
+        <div className="mb-4 flex items-center justify-between rounded-lg bg-warning-subtle border border-warning-subtle px-4 py-3">
+          <p className="text-sm text-warning-strong">
             Please verify your email address. Check your inbox for a verification link.
           </p>
           <button
             onClick={() => setBannerDismissed(true)}
-            className="ml-3 shrink-0 rounded p-1 text-amber-600 hover:text-amber-800"
+            className="ml-3 shrink-0 rounded p-1 text-warning-strong hover:text-warning-strong"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />
@@ -129,10 +131,10 @@ function DashboardComponent() {
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-text">Dashboard</h1>
+        <h1 className="typo-display text-text">Dashboard</h1>
         <Button onClick={handleNewForm} disabled={creating}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          {creating ? 'Creating...' : 'New Form'}
+          {creating ? <Spinner size={12} className="mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
+          {creating ? 'Creating…' : 'New Form'}
         </Button>
       </div>
 
@@ -166,8 +168,8 @@ function DashboardComponent() {
               }
               className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
                 statusFilter === filter.value
-                  ? 'border-primary bg-light text-primary'
-                  : 'border-border text-text-muted hover:bg-light'
+                  ? 'border-primary bg-primary-subtle text-primary'
+                  : 'border-border text-text-muted hover:bg-border-light'
               }`}
             >
               {filter.label}
@@ -200,17 +202,16 @@ function DashboardComponent() {
 
       {/* Content */}
       {data.forms.length === 0 && !search.search ? (
-        /* Empty state */
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="rounded-full bg-light p-4 mb-4">
-            <Plus className="h-8 w-8 text-primary" />
-          </div>
-          <h2 className="text-lg font-semibold text-text mb-1">No forms yet</h2>
-          <p className="text-sm text-text-muted mb-4">Create your first form to get started.</p>
-          <Button onClick={handleNewForm} disabled={creating}>
-            Create your first form
-          </Button>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No forms yet"
+          description="Create your first research flow. Drag nodes, add questions, and publish to a public URL."
+          action={
+            <Button onClick={handleNewForm} disabled={creating}>
+              <Plus className="h-4 w-4" /> New Form
+            </Button>
+          }
+        />
       ) : filteredForms.length === 0 ? (
         <div className="text-center py-12 text-text-muted">
           <p>No forms match your filters.</p>
@@ -238,7 +239,7 @@ function DashboardComponent() {
                   })
                 }
                 disabled={currentPage <= 1}
-                className="p-2 rounded-lg border border-border hover:bg-light disabled:opacity-40 disabled:pointer-events-none"
+                className="p-2 rounded-lg border border-border hover:bg-border-light disabled:opacity-40 disabled:pointer-events-none"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -256,7 +257,7 @@ function DashboardComponent() {
                   })
                 }
                 disabled={currentPage >= totalPages}
-                className="p-2 rounded-lg border border-border hover:bg-light disabled:opacity-40 disabled:pointer-events-none"
+                className="p-2 rounded-lg border border-border hover:bg-border-light disabled:opacity-40 disabled:pointer-events-none"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
